@@ -146,6 +146,78 @@ class APIService {
       throw error;
     }
   }
+
+  /**
+   * Combine multiple documents and generate PDF
+   */
+  async combineDocuments(documentIds: string[]): Promise<{
+    success: boolean;
+    combination_id: string;
+    message: string;
+    sse_endpoint: string;
+    pdf_endpoint: string;
+  }> {
+    try {
+      const response = await fetch(config.apiEndpoints.combineDocuments, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ document_ids: documentIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error combining documents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download the generated PDF
+   */
+  async downloadPdf(combinationId: string): Promise<Blob> {
+    try {
+      const response = await fetch(config.apiEndpoints.downloadPdf(combinationId));
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get list of stored documents
+   */
+  async getStoredDocuments(): Promise<{
+    success: boolean;
+    documents: Array<{ document_id: string; file_name: string; total_pages: number }>;
+    total: number;
+  }> {
+    try {
+      const response = await fetch(config.apiEndpoints.storedDocuments);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching stored documents:', error);
+      throw error;
+    }
+  }
 }
 
 // Create singleton instance

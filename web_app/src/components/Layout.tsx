@@ -28,6 +28,8 @@ const navItems: NavItem[] = [
   { id: 'files', label: 'File Management', icon: <FolderTree size={20} /> },
   { id: 'editor', label: 'Report Editor', icon: <FileEdit size={20} /> },
   { id: 'review', label: 'Review & Approval', icon: <CheckCircle size={20} /> },
+  { id: 'users', label: 'Users', icon: <CheckCircle size={20} /> },
+
 ];
 
 export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {

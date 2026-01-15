@@ -7,6 +7,7 @@ import ReportEditor from './components/ReportEditor';
 import ReviewApproval from './components/ReviewApproval';
 import { mockReports, mockDashboardStats, buildFileTree } from './data/mockData';
 import { ValuationReport, ReportStatus } from './types';
+import Users from './components/Users';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -105,6 +106,10 @@ function App() {
             onStatusChange={handleStatusChange}
             onExport={handleExport}
           />
+        );
+      case 'users':
+        return (
+          <Users/>
         );
       default:
         return (
