@@ -5,7 +5,6 @@ import logging
 
 from app.core.config import config
 from app.api.v1.auth import router as auth_router
-from app.api.v1.documents import router as documents_router
 from app.api.v1.reports import router as reports_router
 
 # Configure logging
@@ -28,7 +27,6 @@ app = FastAPI(
 
 # Include routers
 app.include_router(auth_router)
-app.include_router(documents_router)
 app.include_router(reports_router)
 
 # CORS - Use configuration
