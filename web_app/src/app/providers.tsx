@@ -1,41 +1,37 @@
-import { ReactNode, createContext, useContext, useState } from 'react';
+// app/providers.tsx
+import { ReactNode, createContext, useContext, useState } from "react";
 
-// App state context
 interface AppContextType {
-    currentPage: string;
-    setCurrentPage: (page: string) => void;
-    selectedReportId: string | null;
-    setSelectedReportId: (id: string | null) => void;
+  // keep this minimal and future-proof
+  user: null | { id: string; name: string };
+  setUser: (user: AppContextType["user"]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function useAppContext() {
-    const context = useContext(AppContext);
-    if (!context) {
-        throw new Error('useAppContext must be used within AppProvider');
-    }
-    return context;
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error("useAppContext must be used within AppProvider");
+  }
+  return context;
 }
 
 interface AppProviderProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-    const [currentPage, setCurrentPage] = useState('dashboard');
-    const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [user, setUser] = useState<AppContextType["user"]>(null);
 
-    return (
-        <AppContext.Provider
-            value={{
-                currentPage,
-                setCurrentPage,
-                selectedReportId,
-                setSelectedReportId,
-            }}
-        >
-            {children}
-        </AppContext.Provider>
-    );
+  return (
+    <AppContext.Provider
+      value={{
+        user,
+        setUser,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
 }

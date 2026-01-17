@@ -2,16 +2,13 @@ import { FileText, Clock, CheckCircle, AlertCircle, Upload, FolderOpen } from 'l
 import { DashboardStats, ValuationReport } from '../types';
 import { formatDate } from '../utils/formatDate';
 import { mockReports, mockDashboardStats } from '../data/mockData';
+import { useNavigate } from "react-router-dom";
 
-interface DashboardPageProps {
-    onNavigate: (page: string, reportId?: string) => void;
-}
-
-export default function DashboardPage({ onNavigate }: DashboardPageProps) {
+export default function DashboardPage() {
     // Using mock data directly - in production, this would come from a hook/API
     const stats: DashboardStats = mockDashboardStats;
     const recentReports: ValuationReport[] = mockReports;
-
+    const navigate = useNavigate();
     const statCards = [
         { label: 'Total Reports', value: stats.totalReports, icon: <FileText size={24} />, color: 'bg-blue-500' },
         { label: 'Draft', value: stats.draftReports, icon: <Clock size={24} />, color: 'bg-amber-500' },
@@ -53,7 +50,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <button
-                    onClick={() => onNavigate('upload')}
+                    onClick={() => navigate('upload')}
                     className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-6 flex items-center gap-4 transition-colors"
                 >
                     <Upload size={32} />
@@ -64,7 +61,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                 </button>
 
                 <button
-                    onClick={() => onNavigate('files')}
+                    onClick={() => navigate('files')}
                     className="bg-white hover:bg-gray-50 border-2 border-gray-200 rounded-lg p-6 flex items-center gap-4 transition-colors"
                 >
                     <FolderOpen size={32} className="text-gray-700" />

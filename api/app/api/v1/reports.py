@@ -2,7 +2,7 @@
 Reports API routes
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends, Query
 import logging
 from datetime import datetime
 from pydantic import BaseModel

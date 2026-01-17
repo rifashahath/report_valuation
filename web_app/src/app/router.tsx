@@ -1,49 +1,32 @@
-import Layout from '../components/layout/Layout';
-import DashboardPage from '../pages/DashboardPage';
-import UploadPage from '../pages/UploadPage';
-import UsersPage from '../pages/UsersPage';
-import ReportsPage from '../pages/ReportsPage';
-import ReportEditorPage from '../pages/ReportEditorPage';
-import ReviewApprovalPage from '../pages/ReviewApprovalPage';
+// app/router.tsx
+import { createBrowserRouter } from "react-router-dom";
+import Layout from "../components/layout/Layout";
 
-export type RoutePath =
-    | 'dashboard'
-    | 'upload'
-    | 'files'
-    | 'editor'
-    | 'review'
-    | 'users';
+import DashboardPage from "../pages/DashboardPage";
+import UploadPage from "../pages/UploadPage";
+import ReportsPage from "../pages/ReportsPage";
+import ReportEditorPage from "../pages/ReportEditorPage";
+import ReviewApprovalPage from "../pages/ReviewApprovalPage";
+import UsersPage from "../pages/UsersPage";
+import LoginPage from "../pages/LoginPage";
 
-interface RouterProps {
-    currentPage: string;
-    onNavigate: (page: string, reportId?: string) => void;
-}
+const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: "upload", element: <UploadPage /> },
+      { path: "files", element: <ReportsPage /> },
+      { path: "reports/:id/edit", element: <ReportEditorPage /> },
+      { path: "reports/:id/review", element: <ReviewApprovalPage /> },
+      { path: "users", element: <UsersPage /> },
+    ],
+  },
+]);
 
-export function Router({ currentPage, onNavigate }: RouterProps) {
-    const renderPage = () => {
-        switch (currentPage) {
-            case 'dashboard':
-                return <DashboardPage onNavigate={onNavigate} />;
-            case 'upload':
-                return <UploadPage />;
-            case 'files':
-                return <ReportsPage onNavigate={onNavigate} />;
-            case 'editor':
-                return <ReportEditorPage onNavigate={onNavigate} />;
-            case 'review':
-                return <ReviewApprovalPage onNavigate={onNavigate} />;
-            case 'users':
-                return <UsersPage />;
-            default:
-                return <DashboardPage onNavigate={onNavigate} />;
-        }
-    };
-
-    return (
-        <Layout currentPage={currentPage} onNavigate={onNavigate}>
-            {renderPage()}
-        </Layout>
-    );
-}
-
-export default Router;
+export default router;
