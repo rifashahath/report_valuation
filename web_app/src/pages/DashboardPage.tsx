@@ -1,14 +1,13 @@
 import { FileText, Clock, CheckCircle, AlertCircle, Upload, FolderOpen } from 'lucide-react';
-import { DashboardStats, ValuationReport } from '../types';
 import { formatDate } from '../utils/formatDate';
-import { mockReports, mockDashboardStats } from '../data/mockData';
 import { useNavigate } from "react-router-dom";
+import { useDashboardStats } from '../hooks/useDashboardStats';
+import { Loader } from '../components/common/Loader';
 
 export default function DashboardPage() {
-    // Using mock data directly - in production, this would come from a hook/API
-    const stats: DashboardStats = mockDashboardStats;
-    const recentReports: ValuationReport[] = mockReports;
+    const { stats, recentReports, isLoading } = useDashboardStats();
     const navigate = useNavigate();
+
     const statCards = [
         { label: 'Total Reports', value: stats.totalReports, icon: <FileText size={24} />, color: 'bg-blue-500' },
         { label: 'Draft', value: stats.draftReports, icon: <Clock size={24} />, color: 'bg-amber-500' },
@@ -28,6 +27,10 @@ export default function DashboardPage() {
                 return 'bg-gray-100 text-gray-800';
         }
     };
+
+    if (isLoading) {
+        return <Loader fullScreen text="Loading dashboard data..." />;
+    }
 
     return (
         <div className="p-8">
@@ -108,11 +111,17 @@ export default function DashboardPage() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {recentReports.map((report) => (
+                            {recentReports.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                                        No reports found. Create one to get started.
+                                    </td>
+                                </tr>
+                            ) : recentReports.map((report) => (
                                 <tr
                                     key={report.id}
                                     className="hover:bg-gray-50 cursor-pointer transition-colors"
-                                    onClick={() => onNavigate('editor', report.id)}
+                                    onClick={() => navigate(`editor/${report.id}`)}
                                 >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-gray-900">{report.customerName}</div>
