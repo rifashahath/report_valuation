@@ -11,6 +11,8 @@ web_app/dist
 web_app/dist-ssr
 web_app/*.local
 __pycache__/
+api/__pycache__/*
+api/app/services/*
 *.pyc
 
 web_app/.vscode/*

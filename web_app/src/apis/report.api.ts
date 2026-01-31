@@ -4,7 +4,7 @@ import { apiClient } from '../services/apiClient';
    Types
 ========================= */
 
-export interface Report {
+export interface ApiReport {
   id: string;
   name: string;
   customer_name: string;
@@ -17,7 +17,7 @@ export interface Report {
 }
 
 export interface GetReportsResponse {
-  reports: Report[];
+  reports: ApiReport[];
 }
 
 export interface CheckReportNameResponse {
@@ -35,6 +35,13 @@ export interface UpdateReportRequest {
 ========================= */
 
 export const reportsApi = {
+  /**
+   * Get all reports
+   * GET /api/v1/reports
+   */
+  createReport: (name: string, bank_name: string) =>
+    apiClient.post<GetReportsResponse>('/api/v1/reports', { report_name: name, bank_name }),
+
   /**
    * Get all reports
    * GET /api/v1/reports
@@ -57,14 +64,14 @@ export const reportsApi = {
    * GET /api/v1/reports/{report_id}
    */
   getReportById: (reportId: string) =>
-    apiClient.get<Report>(`/api/v1/reports/${reportId}`),
+    apiClient.get<ApiReport>(`/api/v1/reports/${reportId}`),
 
   /**
    * Update report
    * PUT /api/v1/reports/{report_id}
    */
   updateReport: (reportId: string, data: UpdateReportRequest) =>
-    apiClient.put<Report>(`/api/v1/reports/${reportId}`, data),
+    apiClient.put<ApiReport>(`/api/v1/reports/${reportId}`, data),
 
   /**
    * Delete report
@@ -72,6 +79,26 @@ export const reportsApi = {
    */
   deleteReport: (reportId: string) =>
     apiClient.delete<void>(`/api/v1/reports/${reportId}`),
+
+  /**
+   * Import files to a report
+   * POST /api/v1/reports/{report_id}/import
+   */
+  importFiles: (reportId: string, fileIds: string[]) =>
+    apiClient.post<{ success: boolean; imported_files: any[] }>(
+      `/api/v1/reports/${reportId}/import`,
+      { file_ids: fileIds }
+    ),
+
+  /**
+   * Analyze report
+   * POST /api/v1/reports/analysis
+   */
+  analyzeReport: (reportId: string) =>
+    apiClient.post<{ id: string; analysis: string }>(
+      '/api/v1/reports/analysis',
+      { report_id: reportId }
+    ),
 };
 
 export default reportsApi;

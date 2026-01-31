@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAppStore } from '../store/useAppStore';
 import StepIndicator from './upload/StepIndicator';
 import ProjectNameStep from './upload/ProjectNameStep';
 import UploadStep from './upload/UploadStep';
@@ -7,83 +6,124 @@ import FileSelectionStep from './upload/FileSelectionStep';
 import ProcessingStep from './upload/ProcessingStep';
 import CompletionStep from './upload/CompletionStep';
 import { UploadedFile, ProjectReport } from './upload/types';
-import { createInitialMetadata, createReportObject, generateId } from './upload/uploadHelpers';
+import { useCreateReport } from '../hooks/useReports';
+import apiService from '../services/apiService';
+import { reportsApi } from '../apis/report.api';
 
 export default function Upload() {
   const [currentStep, setCurrentStep] = useState(1);
   const [projectName, setProjectName] = useState('');
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const [recentProjects, setRecentProjects] = useState<ProjectReport[]>([
-    {
-      id: '1',
-      name: 'Tamil Land Documents - Jan 2024',
-      createdAt: new Date('2024-01-15'),
-      fileCount: 12,
-      status: 'completed'
-    },
-    {
-      id: '2',
-      name: 'Bank Reports Analysis',
-      createdAt: new Date('2024-01-10'),
-      fileCount: 8,
-      status: 'completed'
+  const [recentProjects, setRecentProjects] = useState<ProjectReport[]>([]);
+  const [reportId, setReportId] = useState<string | null>(null);
+  const createReportMutation = useCreateReport();
+
+
+  const handleCreateReport = async () => {
+    try {
+      const response = await createReportMutation.mutateAsync({
+        name: projectName,
+        bank_name: 'Default Bank',
+      });
+
+      const createdReport = 'id' in response ? response : (response as any).reports?.[0];
+
+      if (createdReport?.id) {
+        setReportId(createdReport.id);
+        setCurrentStep(2);
+      } else {
+        throw new Error("Report ID not found in response");
+      }
+    } catch (err) {
+      console.error('Failed to create report', err);
+      alert('Failed to create report. Try another name.');
     }
-  ]);
-
-  const { addReport } = useAppStore();
-
-  const handleImportAndAnalyze = () => {
-    if (selectedFiles.length === 0) return;
-
-    setCurrentStep(4);
-
-    setFiles((prev) =>
-      prev.map((file) => ({
-        ...file,
-        status: selectedFiles.includes(file.id) ? 'processing' : file.status,
-        progress: selectedFiles.includes(file.id) ? 50 : file.progress
-      }))
-    );
-
-    setTimeout(() => {
-      setFiles((prev) =>
-        prev.map((file) => ({
-          ...file,
-          status: selectedFiles.includes(file.id) ? 'completed' : file.status,
-          progress: selectedFiles.includes(file.id) ? 100 : file.progress,
-          pages: selectedFiles.includes(file.id)
-            ? Math.floor(Math.random() * 20) + 1
-            : file.pages,
-          language: selectedFiles.includes(file.id) ? 'Tamil' : file.language
-        }))
-      );
-      setCurrentStep(5);
-    }, 3000);
   };
 
-  const handleCreateProject = () => {
-    const newProject: ProjectReport = {
-      id: generateId(),
-      name: projectName,
-      createdAt: new Date(),
-      fileCount: selectedFiles.length,
-      status: 'completed'
-    };
-    setRecentProjects((prev) => [newProject, ...prev]);
+  const handleImportAndAnalyze = async () => {
+    if (selectedFiles.length === 0) return;
 
-    // Add to global store
-    const initialMetadata = createInitialMetadata(projectName);
-    const newReport = createReportObject(newProject, files, selectedFiles, initialMetadata);
+    if (!reportId) {
+      alert("Report ID is missing. Please restart.");
+      return;
+    }
 
-    addReport(newReport);
+    setCurrentStep(4);
+    setIsProcessing(true);
 
+    try {
+      // 1. Upload files if not already uploaded
+      const uploadedFileIds: string[] = [];
+
+      for (const fileId of selectedFiles) {
+        const fileData = files.find(f => f.id === fileId);
+        if (!fileData) continue;
+
+        setFiles(prev => prev.map(f =>
+          f.id === fileId ? { ...f, status: 'processing', progress: 10 } : f
+        ));
+
+        try {
+          // apiService.processDocument is still valid for file upload
+          const response = await apiService.processDocument(fileData.file);
+          uploadedFileIds.push(response.document_id);
+
+          setFiles(prev => prev.map(f =>
+            f.id === fileId ? { ...f, status: 'completed', progress: 100 } : f
+          ));
+        } catch (err) {
+          console.error(`Failed to upload file ${fileData.file.name}`, err);
+          setFiles(prev => prev.map(f =>
+            f.id === fileId ? { ...f, status: 'error', progress: 0 } : f
+          ));
+        }
+      }
+
+      if (uploadedFileIds.length === 0) {
+        throw new Error("No files were successfully uploaded.");
+      }
+
+      // 2. Import Files into Report (using reportsApi from report.api.ts)
+      await reportsApi.importFiles(reportId, uploadedFileIds);
+
+      // 3. Trigger Analysis
+      await reportsApi.analyzeReport(reportId);
+
+      // Success! Move to completion
+      setCurrentStep(5);
+
+    } catch (error) {
+      console.error("Error in import/analyze flow:", error);
+      alert("An error occurred during processing. Please try again.");
+      setCurrentStep(3);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  /* 
+   * Previous handleCreateProject was mixing "saving to local store" with "resetting".
+   * With the new flow, the project is created in the backend during step 4.
+   * So "CompletionStep" just needs to "finish" or "view report".
+   * We'll need to adjust CompletionStep usage or this handler.
+   */
+  const handleFinish = () => {
+    // Trigger global refresh or navigation if needed
+
+    // Reset
     setProjectName('');
     setFiles([]);
     setSelectedFiles([]);
     setCurrentStep(1);
   };
+
+  const handleCreateProject = () => {
+    handleFinish();
+  };
+
 
   const startNewProject = () => {
     setProjectName('');
@@ -106,7 +146,7 @@ export default function Upload() {
           <ProjectNameStep
             projectName={projectName}
             setProjectName={setProjectName}
-            onNext={() => setCurrentStep(2)}
+            onNext={handleCreateReport}
             recentProjects={recentProjects}
           />
         )}

@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import reportsApi, {
-  Report,
-  UpdateReportRequest,
-} from '../apis/reports.api';
+import { reportsApi, ApiReport, UpdateReportRequest } from '../apis';
+
 
 /* =========================
    Query Keys
@@ -14,6 +12,23 @@ const REPORT_KEY = (id: string) => ['reports', id];
 /* =========================
    Hooks
 ========================= */
+export function useCreateReport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      name,
+      bank_name,
+    }: {
+      name: string;
+      bank_name: string;
+    }) => reportsApi.createReport(name, bank_name),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+    },
+  });
+}
 
 /**
  * Get all reports
@@ -66,9 +81,9 @@ export function useUpdateReport() {
       data: UpdateReportRequest;
     }) => reportsApi.updateReport(reportId, data),
 
-    onSuccess: (updatedReport: Report) => {
+    onSuccess: (updatedReport: ApiReport) => {
       // Update single report cache
-      queryClient.setQueryData(REPORT_KEY(updatedReport.id), updatedReport);
+      queryClient.setQueryData(REPORT_KEY(updatedReport?.id), updatedReport);
 
       // Invalidate reports list
       queryClient.invalidateQueries({ queryKey: REPORTS_KEY });

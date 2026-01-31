@@ -12,12 +12,13 @@ export type {
 } from './users.api';
 
 // Reports API
-export { reportsApi } from './reports.api';
+export { reportsApi } from './report.api';
 export type {
-    ReportListResponse,
-    CreateReportRequest,
+    ApiReport,
+    GetReportsResponse,
+    CheckReportNameResponse,
     UpdateReportRequest
-} from './reports.api';
+} from './report.api';
 
 // Documents API
 export { documentsApi } from './documents.api';
