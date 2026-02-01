@@ -13,8 +13,10 @@ import { reportsApi } from '../apis/report.api';
 export default function Upload() {
   const [currentStep, setCurrentStep] = useState(1);
   const [projectName, setProjectName] = useState('');
+  const [bankName, setBankName] = useState('');
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
 
   const [recentProjects] = useState<ProjectReport[]>([]);
@@ -27,7 +29,7 @@ export default function Upload() {
     try {
       const response = await createReportMutation.mutateAsync({
         name: projectName,
-        bank_name: 'Default Bank',
+        bank_name: bankName,
       });
 
       const createdReport = 'id' in response ? response : (response as any).reports?.[0];
@@ -52,7 +54,6 @@ export default function Upload() {
     }
 
     setCurrentStep(4);
-    setCurrentStep(4);
 
     try {
       const filesToUpload = files
@@ -67,7 +68,7 @@ export default function Upload() {
         selectedFiles.includes(f.id) ? { ...f, status: 'processing', progress: 10 } : f
       ));
 
-      // Using project name as client_name
+      // Import Data (Process Files)
       await processMultipleMutation.mutateAsync({
         files: filesToUpload,
         clientName: projectName,
@@ -79,7 +80,10 @@ export default function Upload() {
       ));
 
       // Trigger Analysis
-      await reportsApi.analyzeReport(reportId);
+      const analysisResponse = await reportsApi.analyzeReport(reportId);
+      if (analysisResponse && analysisResponse.analysis) {
+        setAnalysisResult(analysisResponse.analysis);
+      }
 
       setCurrentStep(5);
 
@@ -95,19 +99,13 @@ export default function Upload() {
     }
   };
 
-  /* 
-   * Previous handleCreateProject was mixing "saving to local store" with "resetting".
-   * With the new flow, the project is created in the backend during step 4.
-   * So "CompletionStep" just needs to "finish" or "view report".
-   * We'll need to adjust CompletionStep usage or this handler.
-   */
   const handleFinish = () => {
-    // Trigger global refresh or navigation if needed
-
     // Reset
     setProjectName('');
+    setBankName('');
     setFiles([]);
     setSelectedFiles([]);
+    setAnalysisResult(null);
     setCurrentStep(1);
   };
 
@@ -117,10 +115,7 @@ export default function Upload() {
 
 
   const startNewProject = () => {
-    setProjectName('');
-    setFiles([]);
-    setSelectedFiles([]);
-    setCurrentStep(1);
+    handleFinish();
   };
 
   return (
@@ -137,6 +132,8 @@ export default function Upload() {
           <ProjectNameStep
             projectName={projectName}
             setProjectName={setProjectName}
+            bankName={bankName}
+            setBankName={setBankName}
             onNext={handleCreateReport}
             recentProjects={recentProjects}
           />
@@ -186,6 +183,7 @@ export default function Upload() {
           <CompletionStep
             files={files}
             selectedFiles={selectedFiles}
+            analysisResult={analysisResult}
             onSave={handleCreateProject}
             onRestart={startNewProject}
           />
