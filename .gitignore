@@ -31,3 +31,10 @@ env
 __pycache__/
 *.pyc
 api/uploads/
+api/venv/
+mongo_data/
+uploads/
+__pycache__/
+*.pyc
+node_modules/
+.env

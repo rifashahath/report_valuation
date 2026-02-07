@@ -11,8 +11,9 @@ export interface LoginResponse {
   user: {
     id: string;
     email: string;
-    name: string;
-    role: string;
+    first_name: string;
+    last_name: string;
+    roles: string[];
   };
 }
 

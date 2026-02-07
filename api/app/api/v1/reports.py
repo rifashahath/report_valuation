@@ -2,7 +2,9 @@
 Reports API routes
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
+from typing import List
+from fastapi.responses import Response, FileResponse
 import logging
 from app.services.llm import LLMService
 from datetime import datetime
@@ -10,7 +12,7 @@ from pydantic import BaseModel
 
 from app.models.report import DocumentRequest
 from app.services.report_service import DocumentProcessingService
-from app.repositories.report_repo import ReportRepository, OriginalFileRepository
+from app.repositories.report_repo import ReportRepository, OriginalFileRepository, AIExtractedContentRepository
 from app.core.config import config
 from app.api.v1.dependencies import get_current_user
 import os
@@ -62,6 +64,98 @@ async def create_report(
         "report_name": report["report_name"],
         "created_at": report.get("created_at", datetime.utcnow().isoformat()),
     }
+
+
+@router.post("/reports/{report_id}/files")
+async def upload_files(
+    report_id: str,
+    files: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload files to a report"""
+    
+    # Validate report
+    report = ReportRepository.get_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    if (
+        report["user_id"] != current_user["id"]
+        and "admin" not in current_user.get("roles", [])
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Create uploads directory if it doesn't exist
+    uploads_dir = os.path.join(config.upload_dir, report_id)
+    os.makedirs(uploads_dir, exist_ok=True)
+    
+    uploaded_files = []
+    failed_files = []
+    
+    for file in files:
+        try:
+            # Validate file type (only PDFs for now)
+            if not file.filename.lower().endswith('.pdf'):
+                failed_files.append({
+                    "file_name": file.filename,
+                    "reason": "Only PDF files are supported"
+                })
+                continue
+            
+            # Generate unique filename
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            safe_filename = f"{timestamp}_{file.filename}"
+            file_path = os.path.join(uploads_dir, safe_filename)
+            
+            # Save file to disk
+            with open(file_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+            
+            # Get file size
+            file_size = os.path.getsize(file_path)
+            file_size_mb = file_size / (1024 * 1024)
+            
+            # Save file metadata to database
+            file_doc = OriginalFileRepository.create(
+                report_id=report_id,
+                file_name=file.filename,
+                file_type='pdf',
+                file_path=file_path,
+                file_size_mb=file_size_mb,
+                created_by=current_user["id"]
+            )
+            
+            if file_doc:
+                uploaded_files.append({
+                    "id": file_doc["id"],
+                    "file_name": file_doc["file_name"],
+                    "file_size_mb": file_size_mb,
+                })
+            else:
+                # If DB save failed, remove the file from disk
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                failed_files.append({
+                    "file_name": file.filename,
+                    "reason": "Failed to save file metadata"
+                })
+                
+        except Exception as e:
+            logger.error(f"Failed to upload file {file.filename}: {str(e)}")
+            failed_files.append({
+                "file_name": file.filename,
+                "reason": str(e)
+            })
+    
+    return {
+        "success": True,
+        "uploaded_files": uploaded_files,
+        "failed_files": failed_files,
+        "message": f"Uploaded {len(uploaded_files)} file(s)"
+    }
+
+
 
 
 @router.get("/reports")
@@ -217,6 +311,13 @@ async def analyze_and_summarize(
         # Analyze using LLM
         summarized_content = llm_service.summarize(merged_content)
 
+        # Save analysis
+        AIExtractedContentRepository.save_analysis(
+            report_id=report["id"],
+            content=summarized_content,
+            created_by=current_user["id"]
+        )
+
         return {
             "id": report["id"],
             "report_name": report["report_name"],
@@ -343,3 +444,124 @@ async def get_file_contents(
             for f in files
         ]
     }
+
+
+@router.get("/reports/{report_id}/download")
+async def download_report_pdf(
+    report_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Download report as PDF"""
+    report = ReportRepository.get_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    analysis_doc = AIExtractedContentRepository.get_by_report(report_id)
+    
+    # If analysis doesn't exist (e.g. old report), try to regenerate it
+    if not analysis_doc:
+        logger.info(f"Analysis not found for {report_id}, regenerating...")
+        files = OriginalFileRepository.get_by_report(report_id)
+        
+        contents = []
+        for file in files:
+            file_content = file.get("file_content")
+            if file_content and file_content.strip():
+                contents.append(
+                    f"===== DOCUMENT: {file.get('file_name')} =====\n{file_content}"
+                )
+        
+        if contents:
+            merged_content = "\n\n".join(contents)
+            try:
+                summarized_content = llm_service.summarize(merged_content)
+                # Save for next time
+                saved_analysis = AIExtractedContentRepository.save_analysis(
+                    report_id=report_id,
+                    content=summarized_content,
+                    created_by=current_user["id"]
+                )
+                analysis_content = summarized_content
+            except Exception as e:
+                logger.error(f"Failed to regenerate analysis: {e}")
+                raise HTTPException(status_code=404, detail="Analysis could not be generated")
+        else:
+             raise HTTPException(status_code=404, detail="No content found to analyze")
+    else:
+        analysis_content = analysis_doc["ai_report_content"]
+
+    pdf_bytes = processing_service.generate_pdf(
+        title=report["report_name"],
+        content=analysis_content
+    )
+    
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={report['report_name']}.pdf"}
+    )
+
+from fastapi.responses import FileResponse
+
+@router.get("/files/{file_id}")
+async def download_file(
+    file_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Download original file"""
+    file = OriginalFileRepository.get_by_id(file_id)
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    # Access check (check report ownership)
+    report = ReportRepository.get_by_id(file["report_id"])
+    if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+            
+    if report["user_id"] != current_user["id"] and "admin" not in current_user.get("roles", []):
+            raise HTTPException(status_code=403, detail="Access denied")
+            
+    file_path = file.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File on disk not found")
+            
+    return FileResponse(
+        path=file_path,
+        filename=file["file_name"],
+        media_type="application/pdf"
+    )
+
+
+@router.delete("/files/{file_id}")
+async def delete_file(
+    file_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a file"""
+    file = OriginalFileRepository.get_by_id(file_id)
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    report = ReportRepository.get_by_id(file["report_id"])
+    if not report:
+        raise HTTPException(status_code=404, detail="Report associated with file not found")
+
+    if (
+        report["user_id"] != current_user["id"]
+        and "admin" not in current_user.get("roles", [])
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Delete from disk
+    file_path = file.get("file_path")
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            logger.error(f"Failed to delete file from disk: {e}")
+
+    result = OriginalFileRepository.delete(file_id)
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to delete file record")
+
+    return {"success": True, "message": "File deleted"}

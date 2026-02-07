@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -18,13 +18,14 @@ interface NavItem {
   path: string;
   label: string;
   icon: ReactNode;
+  roles?: string[];
 }
 
 const navItems: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
   { path: '/upload', label: 'Upload & Process', icon: <Upload size={20} /> },
-  { path: '/files', label: 'File Management', icon: <FolderTree size={20} /> },
-  { path: '/users', label: 'Users', icon: <Users size={20} /> },
+  { path: '/files', label: 'File Management', icon: <FolderTree size={20} />, roles: ['admin'] },
+  { path: '/users', label: 'Users', icon: <Users size={20} />, roles: ['admin'] },
 ];
 
 export default function Layout() {
@@ -33,14 +34,18 @@ export default function Layout() {
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   const navigate = useNavigate();
-  const { user, logout, loginLoading } = useAuth();
+  const { user, logout, loginLoading, isAuthenticated, isLoadingUser } = useAuth();
+
+  useEffect(() => {
+    if (!isLoadingUser && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isLoadingUser, isAuthenticated, navigate]);
 
   const initials =
-    user?.name
-      ?.split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase() || 'U';
+    user?.first_name
+      ? user.first_name[0].toUpperCase()
+      : 'U'; // Default callback
 
   const performLogout = async () => {
     await logout();
@@ -51,6 +56,19 @@ export default function Layout() {
   const handleLogoutClick = () => {
     setLogoutModalOpen(true);
   };
+
+  if (isLoadingUser) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.some((role) => user?.roles?.includes(role));
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -92,7 +110,7 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map(item => (
+          {filteredNavItems.map(item => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -123,7 +141,7 @@ export default function Layout() {
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
-                  {user?.name || 'User'}
+                  {user?.first_name} {user?.last_name}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {user?.email}

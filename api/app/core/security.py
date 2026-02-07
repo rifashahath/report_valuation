@@ -3,7 +3,7 @@ Security utilities - JWT handling and password hashing
 """
 
 from jose import jwt, JWTError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import bcrypt
 import secrets
 
@@ -16,9 +16,10 @@ from app.core.config import config
 
 def create_access_token(user_id: str) -> str:
     """Create a JWT access token for the given user ID"""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=config.JWT_EXPIRE_MINUTES)
     payload = {
         "sub": user_id,
-        "exp": datetime.utcnow() + timedelta(minutes=config.JWT_EXPIRE_MINUTES)
+        "exp": expire
     }
     return jwt.encode(payload, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM)
 
@@ -28,7 +29,14 @@ def decode_access_token(token: str) -> str | None:
     try:
         payload = jwt.decode(token, config.JWT_SECRET_KEY, algorithms=[config.JWT_ALGORITHM])
         return payload["sub"]
-    except JWTError:
+    except JWTError as e:
+        print(f"JWT Decode Error: {e}")
+        try:
+             # Try to decode without verification to see what was in it
+             unverified = jwt.get_unverified_claims(token)
+             print(f"Unverified claims: {unverified}. Server now: {datetime.now(timezone.utc)}")
+        except Exception as debug_e:
+             print(f"Failed to inspect token: {debug_e}")
         return None
 
 

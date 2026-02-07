@@ -55,8 +55,7 @@ export const reportsApi = {
    */
   checkReportName: (name: string) =>
     apiClient.get<CheckReportNameResponse>(
-      `/api/v1/reports/check`,
-      { params: { name } }
+      `/api/v1/reports/check?report_name=${encodeURIComponent(name)}`
     ),
 
   /**
@@ -98,6 +97,42 @@ export const reportsApi = {
       '/api/v1/reports/analysis',
       { report_id: reportId }
     ),
+
+  /**
+   * Download report PDF
+   * GET /api/v1/reports/{report_id}/download
+   */
+  downloadReport: (reportId: string) =>
+    apiClient.downloadBlob(`/api/v1/reports/${reportId}/download`),
+
+  /**
+   * Download original file
+   * GET /api/v1/files/{file_id}
+   */
+  downloadFile: (fileId: string) =>
+    apiClient.downloadBlob(`/api/v1/files/${fileId}`),
+
+  /**
+   * Delete original file
+   * DELETE /api/v1/files/{file_id}
+   */
+  deleteFile: (fileId: string) =>
+    apiClient.delete<void>(`/api/v1/files/${fileId}`),
+
+  /**
+   * Upload files to a report
+   * POST /api/v1/reports/{report_id}/files
+   */
+  uploadFiles: (reportId: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    return apiClient.post<{ success: boolean; files: any[] }>(
+      `/api/v1/reports/${reportId}/files`,
+      formData
+    );
+  },
 };
 
 export default reportsApi;

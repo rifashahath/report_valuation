@@ -34,3 +34,4 @@ pymongo==4.6.1
 # Poppler (required by pdf2image)
 #   Ubuntu: sudo apt install poppler-utils
 #   macOS:  brew install poppler
+reportlab==4.0.9

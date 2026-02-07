@@ -34,11 +34,24 @@ app.include_router(reports_router)
 # CORS - Use configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.ALLOWED_ORIGINS,
+    allow_origins=["*"], # Allow all for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from app.db.seeds import run_seeds
+
+@app.on_event("startup")
+def startup_event():
+    """Run database seeds on startup"""
+    try:
+        logger.info("Running database seeds...")
+        run_seeds()
+        logger.info("Database seeding complete")
+    except Exception as e:
+        logger.warning(f"Database seeding failed: {e}")
+
 
 
 @app.get("/")

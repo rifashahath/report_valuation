@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { FolderOpen, ArrowRight, Building2 } from 'lucide-react';
 import { ProjectReport } from './types';
 
@@ -10,6 +11,34 @@ interface ProjectNameStepProps {
     recentProjects: ProjectReport[];
 }
 
+const INDIAN_BANKS = [
+    "State Bank of India (SBI)",
+    "HDFC Bank",
+    "ICICI Bank",
+    "Axis Bank",
+    "Kotak Mahindra Bank",
+    "Punjab National Bank (PNB)",
+    "Bank of Baroda",
+    "Canara Bank",
+    "Union Bank of India",
+    "Bank of India",
+    "Indian Bank",
+    "Central Bank of India",
+    "Indian Overseas Bank",
+    "UCO Bank",
+    "Bank of Maharashtra",
+    "Punjab & Sind Bank",
+    "IDBI Bank",
+    "Federal Bank",
+    "IDFC First Bank",
+    "South Indian Bank",
+    "Karur Vysya Bank",
+    "City Union Bank",
+    "Tamilnad Mercantile Bank",
+    "Karnataka Bank",
+    "Dhanlaxmi Bank"
+];
+
 export default function ProjectNameStep({
     projectName,
     setProjectName,
@@ -18,6 +47,7 @@ export default function ProjectNameStep({
     onNext,
     recentProjects
 }: ProjectNameStepProps) {
+    const [showBankSuggestions, setShowBankSuggestions] = useState(false);
     const handleProjectNameSubmit = () => {
         if (projectName.trim() && bankName.trim()) {
             onNext();
@@ -45,18 +75,46 @@ export default function ProjectNameStep({
             <div className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
-                    <div className="relative">
+                    <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Building2 size={20} className="text-gray-400" />
+                            <Building2 size={20} className="text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                         </div>
                         <input
                             type="text"
                             value={bankName}
-                            onChange={(e) => setBankName(e.target.value)}
+                            onChange={(e) => {
+                                setBankName(e.target.value);
+                                setShowBankSuggestions(true);
+                            }}
+                            onFocus={() => setShowBankSuggestions(true)}
+                            onBlur={() => setTimeout(() => setShowBankSuggestions(false), 200)}
                             placeholder="e.g., HDFC Bank, SBI"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-lg"
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-lg transition-all shadow-sm hover:border-gray-400"
                             autoFocus
                         />
+
+                        {/* Custom Dropdown */}
+                        {showBankSuggestions && (
+                            <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-xl border border-gray-100 max-h-60 overflow-auto scrollbar-thin scrollbar-thumb-gray-200">
+                                {INDIAN_BANKS.filter(b => b.toLowerCase().includes(bankName.toLowerCase())).map((bank) => (
+                                    <div
+                                        key={bank}
+                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer text-gray-700 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
+                                        onClick={() => {
+                                            setBankName(bank);
+                                            setShowBankSuggestions(false);
+                                        }}
+                                    >
+                                        {bank}
+                                    </div>
+                                ))}
+                                {INDIAN_BANKS.filter(b => b.toLowerCase().includes(bankName.toLowerCase())).length === 0 && (
+                                    <div className="px-4 py-3 text-gray-400 italic text-sm">
+                                        No matching banks found
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 

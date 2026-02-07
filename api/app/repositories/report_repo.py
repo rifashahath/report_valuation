@@ -39,6 +39,11 @@ class ReportRepository:
             if report:
                 report["id"] = str(report["_id"])
                 report["user_id"] = str(report["user_id"])
+                if "created_by" in report:
+                    report["created_by"] = str(report["created_by"])
+                if "updated_by" in report:
+                    report["updated_by"] = str(report["updated_by"])
+                del report["_id"]
             return report
         except:
             return None
@@ -51,14 +56,20 @@ class ReportRepository:
 
         result = []
         for report in reports.find(query):
-            result.append({
-            "id": str(report["_id"]),
-            "report_name": report.get("report_name"),
-            "bank_name": report.get("bank_name"),
-            "user_id": str(report.get("user_id")),
-            "created_at": report.get("created_at"),
-            "updated_at": report.get("updated_at")
-            })
+            report_id = str(report["_id"])
+            files = OriginalFileRepository.get_by_report(report_id)
+            print(f"DEBUG: Report {report.get('report_name')} (ID: {report_id}), files count: {len(files)}")
+            
+            item = {
+                "id": report_id,
+                "report_name": report.get("report_name"),
+                "bank_name": report.get("bank_name"),
+                "user_id": str(report.get("user_id")),
+                "created_at": report.get("created_at"),
+                "updated_at": report.get("updated_at"),
+                "files": files
+            }
+            result.append(item)
 
         return result
         
@@ -129,6 +140,11 @@ class OriginalFileRepository:
             if file:
                 file["id"] = str(file["_id"])
                 file["report_id"] = str(file["report_id"])
+                if "created_by" in file:
+                    file["created_by"] = str(file["created_by"])
+                if "updated_by" in file:
+                    file["updated_by"] = str(file["updated_by"])
+                del file["_id"]
             return file
         except:
             return None
@@ -153,6 +169,11 @@ class OriginalFileRepository:
         for file in original_files.find({"report_id": ObjectId(report_id)}):
             file["id"] = str(file["_id"])
             file["report_id"] = str(file["report_id"])
+            if "created_by" in file:
+                file["created_by"] = str(file["created_by"])
+            if "updated_by" in file:
+                file["updated_by"] = str(file["updated_by"])
+            del file["_id"]
             result.append(file)
         return result
     
@@ -179,5 +200,38 @@ class OriginalFileRepository:
         )
         return result.modified_count > 0
 
-  
+
+class AIExtractedContentRepository:
+    
+    @staticmethod
+    def save_analysis(report_id: str, content: str, created_by: str = None) -> dict:
+        """Save AI analysis result"""
+        doc = {
+            "report_id": ObjectId(report_id),
+            "ai_report_content": content,
+            "created_at": datetime.utcnow()
+        }
+        # Upsert - if analysis already exists for report, replace it? 
+        # Or store history? For now, we'll just insert new. 
+        # Actually to keep it simple let's delete old one first if we want 1-to-1
+        ai_extracted_content.delete_many({"report_id": ObjectId(report_id)})
         
+        result = ai_extracted_content.insert_one(doc)
+        return {
+            "id": str(result.inserted_id),
+            "report_id": report_id,
+            "ai_report_content": content
+        }
+
+    @staticmethod
+    def get_by_report(report_id: str) -> Optional[dict]:
+        """Get analysis by report ID"""
+        try:
+            doc = ai_extracted_content.find_one({"report_id": ObjectId(report_id)})
+            if doc:
+                doc["id"] = str(doc["_id"])
+                doc["report_id"] = str(doc["report_id"])
+                del doc["_id"]
+            return doc
+        except:
+            return None

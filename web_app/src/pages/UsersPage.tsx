@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
+import { Navigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 
 import {
   useUsers,
@@ -13,12 +15,21 @@ import { UserHeader } from '../components/users/UserHeader';
 import { UserActionBar } from '../components/users/UserActionBar';
 import { UserTable } from '../components/users/UserTable';
 import { UserModal } from '../components/users/UserModal';
+import { DeleteUserModal } from '../components/users/DeleteUserModal';
 import { User } from '../types/User';
 
 export default function UsersPage() {
   // Queries
-  const { data: users = [], isLoading, refetch } = useUsers();
+  const { user } = useAuth();
+  const { data: usersData, isLoading, refetch } = useUsers();
   const { data: roles = [] } = useRoles();
+
+  // Access check
+  if (user && !user.roles.includes('admin')) {
+    return <Navigate to="/" replace />;
+  }
+
+  const users = usersData || [];
 
   // Mutations
   const deleteUser = useDeleteUser();
@@ -29,6 +40,10 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // Delete Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Derived Data
   const filteredUsers = useMemo(() => {
@@ -61,6 +76,11 @@ export default function UsersPage() {
     setSelectedUser(null);
   };
 
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setUserToDelete(null);
+  };
+
   const handleSubmit = async (formData: any) => {
     try {
       if (selectedUser) {
@@ -90,13 +110,24 @@ export default function UsersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+
+
+  const handleDeleteInitial = (id: string) => {
+    const targetUser = users.find(u => u.id === id);
+    if (targetUser) {
+      setUserToDelete(targetUser);
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
 
     try {
-      await deleteUser.mutateAsync(id);
+      await deleteUser.mutateAsync(userToDelete.id);
       toast.success('User deleted successfully');
       refetch();
+      handleCloseDeleteModal();
     } catch {
       toast.error('Failed to delete user');
     }
@@ -122,7 +153,7 @@ export default function UsersPage() {
           isLoading={isLoading}
           searchTerm={searchTerm}
           onEdit={handleEditClick}
-          onDelete={handleDelete}
+          onDelete={handleDeleteInitial}
           onAddClick={handleAddClick}
         />
 
@@ -133,6 +164,14 @@ export default function UsersPage() {
           roles={roles}
           isLoading={createUser.isPending || updateUser.isPending}
           onSubmit={handleSubmit}
+        />
+
+        <DeleteUserModal
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleConfirmDelete}
+          user={userToDelete}
+          isLoading={deleteUser.isPending}
         />
       </div>
     </div>

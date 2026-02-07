@@ -55,10 +55,6 @@ export interface UpdateUserRequest {
    API Response Types
 ========================= */
 
-export interface GetUsersResponse {
-    users: User[];
-}
+export type GetUsersResponse = User[];
 
-export interface GetRolesResponse {
-    roles: Role[];
-}
+export type GetRolesResponse = Role[];

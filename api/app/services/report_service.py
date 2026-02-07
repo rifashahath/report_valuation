@@ -246,3 +246,58 @@ class DocumentProcessingService:
         """Get SSE stream for document updates"""
         logger.info(f"Establishing SSE stream for document: {document_id}")
         return self.sse_manager.event_generator(document_id)
+
+    def generate_pdf(self, title: str, content: str) -> bytes:
+        """Generate PDF from report content"""
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+        import io
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=18
+        )
+
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name='Justify', alignment=1))
+
+        Story = []
+        
+        # Title
+        Story.append(Paragraph(title, styles["Title"]))
+        Story.append(Spacer(1, 12))
+
+        # Content - Split by newlines and handle basic markdown-like structure
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                Story.append(Spacer(1, 12))
+                continue
+            
+            # Simple markdown handling
+            if line.startswith('#'):
+                # Headers
+                header_level = len(line) - len(line.lstrip('#'))
+                text = line.lstrip('#').strip()
+                style_name = "Heading1" if header_level == 1 else "Heading2"
+                Story.append(Paragraph(text, styles[style_name]))
+            elif line.startswith('- ') or line.startswith('* '):
+                # Bullets
+                text = line[2:].strip()
+                Story.append(Paragraph(f"• {text}", styles["BodyText"]))
+            else:
+                # Normal text
+                Story.append(Paragraph(line, styles["BodyText"]))
+            
+        doc.build(Story)
+        buffer.seek(0)
+        return buffer.getvalue()

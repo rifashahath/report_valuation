@@ -1,6 +1,6 @@
 """
 Database seeding script
-Seeds roles: admin, viewer, editor
+Seeds roles: admin, user
 Creates admin user: admin@jothis.com / password123
 """
 
@@ -12,7 +12,7 @@ from app.core.security import hash_password
 
 def seed_roles():
     """Seed the default roles"""
-    default_roles = ["admin", "viewer", "editor"]
+    default_roles = ["admin", "user"]
     
     for role_name in default_roles:
         existing = roles.find_one({"name": role_name})

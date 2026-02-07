@@ -23,10 +23,43 @@ router = APIRouter(prefix="/api/v1", tags=["Auth & Users"])
 # Authentication
 # ----------------------
 
+@router.post("/auth/register", response_model=TokenResponse)
+async def register(user_data: UserCreate):
+    """Register a new user"""
+    try:
+        user = UserRepository.create(
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
+            email=user_data.email,
+            password=user_data.password,
+            role_name="viewer" # Default role for self-registration
+        )
+        
+        # Auto-login
+        token = create_access_token(user["id"])
+        
+        return TokenResponse(
+            access_token=token,
+            user=UserResponse(
+                id=user["id"],
+                first_name=user["first_name"],
+                last_name=user["last_name"],
+                email=user["email"],
+                roles=user.get("roles", []),
+                created_at=user.get("created_at"),
+                updated_at=user.get("updated_at")
+            )
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     """Login and get access token"""
+    print(f"Login attempt for: {credentials.email}")
     user = UserRepository.authenticate(credentials.email, credentials.password)
+    print(f"User found: {user is not None}")
     
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")

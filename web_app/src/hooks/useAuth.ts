@@ -47,6 +47,14 @@ export function useAuth() {
 
     // actions
     login: loginMutation.mutateAsync,
+    register: (data: any) => {
+      // We'll define a proper mutation for this
+      return authApi.register(data).then(res => {
+        localStorage.setItem(TOKEN_KEY, res.access_token);
+        queryClient.setQueryData(AUTH_USER_KEY, res.user);
+        return res;
+      });
+    },
     logout: logoutMutation.mutateAsync,
 
     // status

@@ -19,8 +19,11 @@ services:
     image: mongo:6
     container_name: report_mongodb
     volumes:
-      - mongo_data:/data/db
+      - ./mongo_data:/data/db
+    ports:
+      - "27017:27017"
     restart: always
+<<<<<<< HEAD
 
   frontend:
     build:
@@ -37,3 +40,5 @@ services:
 
 volumes:
   mongo_data:
+=======
+>>>>>>> f4618dae20949d1268d1d1b1547a3fe2d49e24c5
