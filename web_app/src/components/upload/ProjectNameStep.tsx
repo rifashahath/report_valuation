@@ -1,17 +1,6 @@
+import { useState, useMemo } from 'react';
 import { FolderOpen, ArrowRight, Building2 } from 'lucide-react';
 import { ProjectReport } from './types';
-import { useQuery } from '@tanstack/react-query';
-import { banksApi } from '../../apis/bank.api';
-import { INDIAN_BANKS } from '../../data/indianBanks';
-
-interface ProjectNameStepProps {
-    projectName: string;
-    setProjectName: (name: string) => void;
-    bankName: string;
-    setBankName: (name: string) => void;
-    onNext: () => void;
-    recentProjects: ProjectReport[];
-}
 
 const INDIAN_BANKS = [
     "State Bank of India (SBI)",
@@ -38,8 +27,17 @@ const INDIAN_BANKS = [
     "City Union Bank",
     "Tamilnad Mercantile Bank",
     "Karnataka Bank",
-    "Dhanlaxmi Bank"
+    "Dhanlaxmi Bank",
 ];
+
+interface ProjectNameStepProps {
+    projectName: string;
+    setProjectName: (name: string) => void;
+    bankName: string;
+    setBankName: (name: string) => void;
+    onNext: () => void;
+    recentProjects: ProjectReport[];
+}
 
 export default function ProjectNameStep({
     projectName,
@@ -47,8 +45,10 @@ export default function ProjectNameStep({
     bankName,
     setBankName,
     onNext,
-    recentProjects
+    recentProjects,
 }: ProjectNameStepProps) {
+    const [showBankSuggestions, setShowBankSuggestions] = useState(false);
+
     const handleProjectNameSubmit = () => {
         if (projectName.trim() && bankName.trim()) {
             onNext();
@@ -59,42 +59,19 @@ export default function ProjectNameStep({
         return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
     const suggestions = useMemo(() => {
-        const normalizedInput = bankName.toLowerCase();
-        if (!normalizedInput && !showBankSuggestions) return [];
+        const normalizedInput = bankName.trim().toLowerCase();
+        // Hide suggestions if input is empty or suggestions not active
+        if (!showBankSuggestions || !normalizedInput) return [];
 
-        const dynamicNames = banks?.map(b => b.name) || [];
-
-        // Use a Set for case-insensitive tracking, but preserve original casing from INDIAN_BANKS first
-        const seen = new Set<string>();
-        const uniqueNames: string[] = [];
-
-        // Add static banks first
-        INDIAN_BANKS.forEach(name => {
-            const lower = name.toLowerCase();
-            if (!seen.has(lower)) {
-                seen.add(lower);
-                uniqueNames.push(name);
-            }
-        });
-
-        // Add dynamic banks if not present
-        dynamicNames.forEach(name => {
-            const lower = name.toLowerCase();
-            if (!seen.has(lower)) {
-                seen.add(lower); // assuming dynamic name casing is acceptable if unique
-                uniqueNames.push(name);
-            }
-        });
-
-        return uniqueNames
-            .filter(name => name.toLowerCase().includes(normalizedInput))
-            .sort();
-    }, [banks, bankName, showBankSuggestions]);
+        return INDIAN_BANKS.filter((name) =>
+            name.toLowerCase().includes(normalizedInput)
+        ).sort();
+    }, [bankName, showBankSuggestions]);
 
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 max-w-2xl mx-auto overflow-hidden relative">
@@ -110,6 +87,7 @@ export default function ProjectNameStep({
             </div>
 
             <div className="space-y-6">
+                {/* Bank Name */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
                     <div className="relative group">
@@ -129,9 +107,27 @@ export default function ProjectNameStep({
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-lg transition-all shadow-sm hover:border-gray-400"
                             autoFocus
                         />
+                        {/* Suggestions Dropdown */}
+                        {showBankSuggestions && suggestions.length > 0 && (
+                            <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                {suggestions.map((name) => (
+                                    <li
+                                        key={name}
+                                        className="px-4 py-2 cursor-pointer hover:bg-blue-50 text-sm text-gray-800"
+                                        onMouseDown={() => {
+                                            setBankName(name);
+                                            setShowBankSuggestions(false);
+                                        }}
+                                    >
+                                        {name}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </div>
 
+                {/* Report Name */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Report Name *</label>
                     <input

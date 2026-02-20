@@ -1,13 +1,16 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import logging
+import os
 
 from app.core.config import config
 from app.api.v1.auth import router as auth_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.banks import router as banks_router
+from app.api.v1.jobs import router as jobs_router
 
 # Configure logging
 logging.basicConfig(
@@ -32,6 +35,12 @@ app.include_router(auth_router)
 app.include_router(documents_router)
 app.include_router(reports_router)
 app.include_router(banks_router)
+app.include_router(jobs_router)   # ← async Celery-based job API
+
+# Serve uploaded files statically so the browser can preview PDFs
+_upload_dir = os.getenv("UPLOAD_DIR", "/app/uploads")
+os.makedirs(_upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_upload_dir), name="uploads")
 
 # CORS - Use configuration
 app.add_middleware(

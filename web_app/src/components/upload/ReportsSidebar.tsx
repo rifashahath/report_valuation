@@ -69,7 +69,7 @@ export default function ReportsSidebar({ selectedReportId, onReportSelect }: Rep
                                             ? 'text-brand-900'
                                             : 'text-secondary-900 group-hover:text-brand-800'
                                             }`}>
-                                            {report.name}
+                                            {report.report_name}
                                         </h3>
                                         {report.bank_name && (
                                             <p className="text-sm text-secondary-500 mt-1 truncate">

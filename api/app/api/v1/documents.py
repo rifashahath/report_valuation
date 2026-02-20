@@ -23,6 +23,52 @@ router = APIRouter(prefix="/api/v1", tags=["Documents"])
 processing_service = DocumentProcessingService()
 
 
+@router.get("/files/tree")
+async def get_file_tree(current_user: dict = Depends(get_current_user)):
+    """
+    Walk the uploads directory and return a nested tree that mirrors
+    the real folder structure on disk:
+      uploads/
+        2026/
+          feb/
+            mm/         ← project/client folder
+              abc123.pdf
+    """
+    upload_dir = config.UPLOAD_DIR
+
+    def walk_dir(path: str, rel: str = "") -> list:
+        nodes = []
+        try:
+            entries = sorted(os.scandir(path), key=lambda e: (e.is_file(), e.name))
+        except PermissionError:
+            return nodes
+
+        for entry in entries:
+            node_rel = f"{rel}/{entry.name}" if rel else entry.name
+            if entry.is_dir(follow_symlinks=False):
+                children = walk_dir(entry.path, node_rel)
+                nodes.append({
+                    "id": node_rel,
+                    "name": entry.name,
+                    "type": "folder",
+                    "path": node_rel,
+                    "children": children,
+                })
+            elif entry.is_file(follow_symlinks=False):
+                nodes.append({
+                    "id": node_rel,
+                    "name": entry.name,
+                    "type": "file",
+                    "path": node_rel,
+                    # URL the browser can use to fetch/preview the file
+                    "url": f"/uploads/{node_rel}",
+                })
+        return nodes
+
+    tree = walk_dir(upload_dir)
+    return {"tree": [{"id": "uploads", "name": "uploads", "type": "folder", "path": "", "children": tree}]}
+
+
 @router.post("/process")
 async def process_document(
   file: UploadFile = File(...),

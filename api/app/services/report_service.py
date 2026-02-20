@@ -45,13 +45,22 @@ class DocumentProcessingService:
 
             # Tamil or mixed → translate
             if contains_tamil(text):
-                translated = await self.translation_service.translate_to_legal_english(
-                    tamil_text=text,
-                    page_num=page_num
-                )
-                final_pages.append(
-                    f"Page {page_num}\n{translated}"
-                )
+                try:
+                    translated = await self.translation_service.translate_to_legal_english(
+                        tamil_text=text,
+                        page_num=page_num
+                    )
+                    final_pages.append(
+                        f"Page {page_num}\n{translated}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Translation failed for page {page_num}, using raw OCR text: {e}"
+                    )
+                    # Fall back to raw OCR text so import still succeeds
+                    final_pages.append(
+                        f"Page {page_num}\n{text.strip()}"
+                    )
             else:
                 # Already English
                 final_pages.append(

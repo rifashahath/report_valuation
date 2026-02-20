@@ -92,15 +92,77 @@ async def check_report_name(
 
     return {"exists": exists}
 
+@router.post("/reports/{report_id}/files")
+async def upload_files_to_report(
+    report_id: str,
+    files: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload one or more files to a report and save them to disk."""
+
+    report = ReportRepository.get_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if (
+        report["user_id"] != current_user["id"]
+        and "admin" not in current_user.get("roles", [])
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Construct structured upload path: uploads/YYYY/Month/Bank/ReportName
+    import re
+    def sanitize(name):
+        return re.sub(r'[^a-zA-Z0-9_\-]', '_', str(name))
+
+    now = datetime.utcnow()
+    year = str(now.year)
+    month = now.strftime('%B') # Full month name
+    
+    bank_name = sanitize(report.get("bank_name", "Unknown_Bank"))
+    report_name = sanitize(report.get("report_name", report_id))
+    
+    upload_dir = os.path.join(config.UPLOAD_DIR, year, month, bank_name, report_name)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    saved_files = []
+    for upload_file in files:
+        file_path = os.path.join(upload_dir, upload_file.filename)
+        contents = await upload_file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+
+        file_size_mb = len(contents) / (1024 * 1024)
+        file_type = upload_file.content_type or "application/pdf"
+
+        file_record = OriginalFileRepository.create(
+            report_id=report_id,
+            file_name=upload_file.filename,
+            file_type=file_type,
+            file_path=file_path,
+            created_by=current_user["id"],
+            file_size_mb=round(file_size_mb, 3),
+        )
+        saved_files.append({"id": file_record["id"], "file_name": upload_file.filename})
+
+    return {"success": True, "files": saved_files}
+
+
 @router.post("/reports/{report_id}/import")
 async def import_report_files(
     report_id: str,
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Import all uploaded files under a report:
-    OCR + translate and store file_content
+    Dispatch async Celery processing jobs for all uploaded files in a report.
+
+    Returns immediately with { job_ids } — the frontend should poll
+    GET /api/v1/jobs/{job_id} for each job until completion.
     """
+    from app.celery_app import celery_app as _celery
+    from app.db.session import original_files as orig_col
+    from bson import ObjectId
+    from datetime import datetime as _dt
 
     # Validate report
     report = ReportRepository.get_by_id(report_id)
@@ -120,12 +182,23 @@ async def import_report_files(
             detail="No files found for this report"
         )
 
-    imported_files = []
+    queued_jobs   = []
     skipped_files = []
 
     for file_doc in files:
-        file_id = file_doc["id"]
+        file_id   = file_doc["id"]
         file_path = file_doc.get("file_path")
+
+        # Skip only files that are actively in-flight RIGHT NOW or already done.
+        # Intermediate states (ocr_started, summarising, etc.) could be stale
+        # if a worker crashed — so we re-queue them so the user can retry.
+        current_status = file_doc.get("processing_status", "")
+        if current_status in ("queued", "processing", "completed"):
+            skipped_files.append({
+                "file_id": file_id,
+                "reason": f"Already {current_status}"
+            })
+            continue
 
         if not file_path or not os.path.exists(file_path):
             skipped_files.append({
@@ -134,39 +207,38 @@ async def import_report_files(
             })
             continue
 
-        if file_doc.get("file_content"):
-            skipped_files.append({
-                "file_id": file_id,
-                "reason": "Already imported"
-            })
-            continue
+        # Mark as queued in MongoDB so the poll endpoint reflects it immediately
+        orig_col.update_one(
+            {"_id": ObjectId(file_id)},
+            {"$set": {"processing_status": "queued", "updated_at": _dt.utcnow()}},
+        )
 
-        try:
-            final_text = await processing_service.import_document(file_path)
+        # Dispatch Celery task — use file_id as task_id so job polling is easy
+        task = _celery.send_task(
+            "app.tasks.process_task.process_document_task",
+            args    = [file_id, current_user["id"]],
+            queue   = "document_processing",
+            task_id = file_id,
+        )
+        logger.info("Queued process_document_task: file_id=%s task_id=%s", file_id, task.id)
 
-            OriginalFileRepository.update_file_content(
-                file_id=file_id,
-                content=final_text,
-                updated_by=current_user["id"]
-            )
+        queued_jobs.append({
+            "file_id":    file_id,
+            "job_id":     task.id,          # same as file_id
+            "file_name":  file_doc.get("file_name"),
+            "status_url": f"/api/v1/jobs/{task.id}",
+        })
 
-            imported_files.append({
-                "file_id": file_id,
-                "file_name": file_doc.get("file_name")
-            })
-
-        except Exception as e:
-            skipped_files.append({
-                "file_id": file_id,
-                "reason": f"Import failed: {str(e)}"
-            })
+    if not queued_jobs and not skipped_files:
+        raise HTTPException(status_code=400, detail="No files to process")
 
     return {
-        "success": True,
-        "report_id": report_id,
-        "imported_files": imported_files,
+        "success":       True,
+        "report_id":     report_id,
+        "job_ids":       [j["job_id"] for j in queued_jobs],
+        "queued_jobs":   queued_jobs,
         "skipped_files": skipped_files,
-        "message": "Import completed"
+        "message":       "Processing started in the background. Poll each status_url for progress.",
     }
 
 
@@ -347,11 +419,37 @@ async def get_file_contents(
             {
                 "file_id": f["id"],
                 "file_name": f["file_name"],
-                "content_preview": (f.get("file_content") or "")[:1000]
+                # Return the full extracted/translated content
+                "content": f.get("file_content") or ""
             }
             for f in files
         ]
     }
+
+
+@router.get("/reports/{report_id}/analysis")
+async def get_report_analysis(
+    report_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Fetch the stored LLM analysis for a report"""
+    report = ReportRepository.get_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if (
+        report["user_id"] != current_user["id"]
+        and "admin" not in current_user.get("roles", [])
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    analysis_doc = AIExtractedContentRepository.get_by_report(report_id)
+    return {
+        "report_id": report_id,
+        "report_name": report.get("report_name", ""),
+        "analysis": analysis_doc["ai_report_content"] if analysis_doc else None,
+    }
+
 
 
 @router.get("/reports/{report_id}/download")

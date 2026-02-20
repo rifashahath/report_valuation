@@ -9,6 +9,8 @@ import ReportEditorPage from "../pages/ReportEditorPage";
 import ReviewApprovalPage from "../pages/ReviewApprovalPage";
 import UsersPage from "../pages/UsersPage";
 import LoginPage from "../pages/LoginPage";
+import SignupPage from "../pages/SignupPage";
+import BankManagementPage from "../pages/BankManagementPage";
 
 const router = createBrowserRouter([
   {

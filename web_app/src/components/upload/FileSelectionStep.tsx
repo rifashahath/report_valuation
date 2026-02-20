@@ -158,6 +158,9 @@ export default function FileSelectionStep({
                                     <p className="font-medium text-secondary-900">{file.file.name}</p>
                                     <div className="flex items-center gap-2 text-sm text-secondary-600">
                                         <span>{file.fileSize} • {formatDate(file.uploadDate)}</span>
+                                        {file.status === 'pending' && (
+                                            <span className="text-blue-600 font-medium text-xs">Pending Upload</span>
+                                        )}
                                         {file.status === 'uploading' && (
                                             <span className="text-brand-600 font-medium text-xs">Uploading...</span>
                                         )}

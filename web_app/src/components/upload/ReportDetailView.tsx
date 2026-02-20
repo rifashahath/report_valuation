@@ -13,13 +13,13 @@ export default function ReportDetailView({ reportId }: ReportDetailViewProps) {
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    // Fetch analysis when report is selected
+    // Fetch stored analysis when report is selected (don't re-run OpenAI)
     useEffect(() => {
         if (reportId && reportData) {
             const fetchAnalysis = async () => {
                 setLoadingAnalysis(true);
                 try {
-                    const analysisResponse = await reportsApi.analyzeReport(reportId);
+                    const analysisResponse = await reportsApi.getReportAnalysis(reportId);
                     if (analysisResponse && analysisResponse.analysis) {
                         setAnalysisResult(analysisResponse.analysis);
                     } else {
@@ -144,58 +144,58 @@ export default function ReportDetailView({ reportId }: ReportDetailViewProps) {
                 <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
-                            <h1 className="text-3xl font-bold mb-2">{reportData.name}</h1>
+                            <h1 className="text-3xl font-bold mb-2">{reportData.report.report_name}</h1>
                             <div className="flex items-center gap-2 text-indigo-100">
                                 <Calendar size={16} />
-                                <span className="text-sm">Created on {formatDate(reportData.created_at)}</span>
+                                <span className="text-sm">Created on {formatDate(reportData.report.created_at)}</span>
                             </div>
                         </div>
-                        <span className={`px-4 py-2 rounded-full text-sm font-semibold ${reportData.status === 'approved'
+                        <span className={`px-4 py-2 rounded-full text-sm font-semibold ${reportData.report.status === 'approved'
                             ? 'bg-green-500 text-white'
-                            : reportData.status === 'review'
+                            : reportData.report.status === 'review'
                                 ? 'bg-yellow-500 text-white'
                                 : 'bg-gray-500 text-white'
                             }`}>
-                            {(reportData.status || 'draft').charAt(0).toUpperCase() + (reportData.status || 'draft').slice(1)}
+                            {(reportData.report.status || 'draft').charAt(0).toUpperCase() + (reportData.report.status || 'draft').slice(1)}
                         </span>
                     </div>
 
                     {/* Report Metadata Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                        {reportData.bank_name && (
+                        {reportData.report.bank_name && (
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <Building2 size={18} />
                                     <span className="text-sm font-medium text-indigo-100">Bank Name</span>
                                 </div>
-                                <p className="text-lg font-semibold">{reportData.bank_name}</p>
+                                <p className="text-lg font-semibold">{reportData.report.bank_name}</p>
                             </div>
                         )}
-                        {reportData.property_type && (
+                        {reportData.report.property_type && (
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <FileText size={18} />
                                     <span className="text-sm font-medium text-indigo-100">Property Type</span>
                                 </div>
-                                <p className="text-lg font-semibold">{reportData.property_type}</p>
+                                <p className="text-lg font-semibold">{reportData.report.property_type}</p>
                             </div>
                         )}
-                        {reportData.location && (
+                        {reportData.report.location && (
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <MapPin size={18} />
                                     <span className="text-sm font-medium text-indigo-100">Location</span>
                                 </div>
-                                <p className="text-lg font-semibold">{reportData.location}</p>
+                                <p className="text-lg font-semibold">{reportData.report.location}</p>
                             </div>
                         )}
-                        {reportData.customer_name && (
+                        {reportData.report.customer_name && (
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                                 <div className="flex items-center gap-2 mb-1">
                                     <FileText size={18} />
                                     <span className="text-sm font-medium text-indigo-100">Customer Name</span>
                                 </div>
-                                <p className="text-lg font-semibold">{reportData.customer_name}</p>
+                                <p className="text-lg font-semibold">{reportData.report.customer_name}</p>
                             </div>
                         )}
                     </div>
@@ -242,7 +242,7 @@ export default function ReportDetailView({ reportId }: ReportDetailViewProps) {
                                                     const url = window.URL.createObjectURL(blob);
                                                     const a = document.createElement('a');
                                                     a.href = url;
-                                                    a.download = `${reportData?.name || 'report'}.pdf`;
+                                                    a.download = `${reportData?.report.report_name || 'report'}.pdf`;
                                                     document.body.appendChild(a);
                                                     a.click();
                                                     window.URL.revokeObjectURL(url);

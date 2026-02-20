@@ -159,6 +159,11 @@ export default function UploadStep({
                                         <p className="font-medium text-secondary-900">{file.file.name}</p>
                                         <div className="flex items-center gap-3">
                                             <p className="text-sm text-secondary-500 font-medium bg-secondary-50 px-2 py-0.5 rounded border border-secondary-100">{file.fileSize}</p>
+                                            {file.status === 'pending' && (
+                                                <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                                    Pending Upload
+                                                </span>
+                                            )}
                                             {file.status === 'uploading' && (
                                                 <span className="text-xs text-brand-600 font-bold bg-brand-50 px-2 py-0.5 rounded-full flex items-center gap-1">
                                                     <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />

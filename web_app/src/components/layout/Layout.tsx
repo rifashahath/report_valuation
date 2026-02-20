@@ -98,7 +98,7 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
-          {filteredNavItems.map(item => (
+          {navItems.map(item => (
             <NavLink
               key={item.path}
               to={item.path}

@@ -6,7 +6,7 @@ import { apiClient } from '../services/apiClient';
 
 export interface ApiReport {
   id: string;
-  name: string;
+  report_name: string;
   customer_name: string;
   bank_name: string;
   property_type: string;
@@ -34,13 +34,25 @@ export interface UpdateReportRequest {
    API
 ========================= */
 
+export interface GetReportByIdResponse {
+  success: boolean;
+  report: ApiReport;
+  files: any[];
+}
+
+export interface CreateReportResponse {
+  id: string;
+  report_name: string;
+  created_at: string;
+}
+
 export const reportsApi = {
   /**
    * Get all reports
    * GET /api/v1/reports
    */
   createReport: (name: string, bank_name: string) =>
-    apiClient.post<GetReportsResponse>('/api/v1/reports', { report_name: name, bank_name }),
+    apiClient.post<CreateReportResponse>('/api/v1/reports', { report_name: name, bank_name }),
 
   /**
    * Get all reports
@@ -58,12 +70,14 @@ export const reportsApi = {
       `/api/v1/reports/check?report_name=${encodeURIComponent(name)}`
     ),
 
+
+
   /**
    * Get report by ID
    * GET /api/v1/reports/{report_id}
    */
   getReportById: (reportId: string) =>
-    apiClient.get<ApiReport>(`/api/v1/reports/${reportId}`),
+    apiClient.get<GetReportByIdResponse>(`/api/v1/reports/${reportId}`),
 
   /**
    * Update report
@@ -80,13 +94,40 @@ export const reportsApi = {
     apiClient.delete<void>(`/api/v1/reports/${reportId}`),
 
   /**
-   * Import files to a report
+   * Import files to a report — dispatches Celery tasks and returns immediately
    * POST /api/v1/reports/{report_id}/import
    */
   importFiles: (reportId: string) =>
-    apiClient.post<{ success: boolean }>(
+    apiClient.post<{
+      success: boolean;
+      report_id: string;
+      job_ids: string[];
+      queued_jobs: { file_id: string; job_id: string; file_name: string; status_url: string }[];
+      skipped_files: { file_id: string; reason: string }[];
+      message: string;
+    }>(
       `/api/v1/reports/${reportId}/import`
     ),
+
+  /**
+   * Poll a single async job status
+   * GET /api/v1/jobs/{job_id}
+   */
+  pollJobStatus: (jobId: string) =>
+    apiClient.get<{
+      job_id: string;
+      celery: { state: string; ready: boolean; succeeded: boolean; failed: boolean; error?: string };
+      details: {
+        processing_status: string;
+        current_page: number | null;
+        total_pages: number | null;
+        output_pdf_path: string | null;
+        error_message: string | null;
+        completed_at: string | null;
+        summary: string | null;
+      } | null;
+      download_url?: string;
+    }>(`/api/v1/jobs/${jobId}`),
 
   /**
    * Analyze report
@@ -133,6 +174,23 @@ export const reportsApi = {
       formData
     );
   },
+  /**
+   * Get full extracted/translated content for all files in a report
+   * GET /api/v1/reports/{report_id}/files/content
+   */
+  getFileContents: (reportId: string) =>
+    apiClient.get<{ report_id: string; files: { file_id: string; file_name: string; content: string }[] }>(
+      `/api/v1/reports/${reportId}/files/content`
+    ),
+
+  /**
+   * Get stored LLM analysis for a report
+   * GET /api/v1/reports/{report_id}/analysis
+   */
+  getReportAnalysis: (reportId: string) =>
+    apiClient.get<{ report_id: string; report_name: string; analysis: string | null }>(
+      `/api/v1/reports/${reportId}/analysis`
+    ),
 };
 
 export default reportsApi;
