@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Send, Sparkles, MessageSquare, ChevronLeft } from 'lucide-react';
 import { ValuationReport } from '../../types';
 import { formatDate } from '../../utils/formatDate';
@@ -18,6 +18,13 @@ export default function ReportEditor({ report, onBack, onSave, onSendForReview }
         finalValuation: '',
     });
     const [activeSection, setActiveSection] = useState<keyof typeof content>('summary');
+
+    // Sync content when report data is loaded asynchronously
+    useEffect(() => {
+        if (report?.content) {
+            setContent(report.content);
+        }
+    }, [report?.id, report?.content?.summary]);
     const [showComments, setShowComments] = useState(false);
 
     if (!report) {

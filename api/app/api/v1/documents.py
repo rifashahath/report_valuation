@@ -151,7 +151,8 @@ async def process_document(
 
     await processing_service.process_document(
       request,
-      document_id
+      document_id,
+      current_user["id"]
     )
 
     return {
@@ -275,7 +276,8 @@ async def process_multiple_documents(
 
             await processing_service.process_document(
                 request,
-                document_id
+                document_id,
+                current_user["id"]
             )
 
             uploaded_documents.append({

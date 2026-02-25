@@ -69,188 +69,31 @@ class DocumentProcessingService:
 
         return "\n\n".join(final_pages)
       
-    async def process_document(self, request: DocumentRequest, document_id: str) -> str:
-        """Start document processing and return document ID"""
-        logger.info(f"Starting document processing: {document_id}")
-        
-        # Start processing in background
-        task = asyncio.create_task(
-            self._process_document_async(document_id, request)
+    async def process_document(self, request: DocumentRequest, document_id: str, user_id: str = "system") -> str:
+        """Dispatch document processing to Celery"""
+        from app.celery_app import celery_app
+        from app.db.session import original_files as orig_col
+        from bson import ObjectId
+        from datetime import datetime
+
+        logger.info(f"Dispatching document processing to Celery: {document_id}")
+
+        # Initial status
+        orig_col.update_one(
+            {"_id": ObjectId(document_id)},
+            {"$set": {"processing_status": "queued", "updated_at": datetime.utcnow()}},
         )
-        self.active_processes[document_id] = task
-        
-        # Cleanup task when done
-        task.add_done_callback(
-            lambda t: self._cleanup_task(document_id, t)
+
+        # Dispatch
+        task = celery_app.send_task(
+            "app.tasks.process_task.process_document_task",
+            args=[document_id, user_id],
+            queue="document_processing",
+            task_id=document_id
         )
-        
+
         return document_id
-    
-    def _cleanup_task(self, document_id: str, task: asyncio.Task):
-        """Clean up completed task"""
-        self.active_processes.pop(document_id, None)
-        if task.exception():
-            logger.error(f"Task failed for document {document_id}: {task.exception()}")
-    
-    async def _process_document_async(self, document_id: str, request: DocumentRequest):
-        """Async document processing pipeline"""
-        try:
-            # Fetch file from repository
-            file_doc = OriginalFileRepository.get_by_id(document_id)
-            if not file_doc or not file_doc.get("file_path"):
-                raise Exception("File path not found for document")
 
-            file_path = file_doc["file_path"]
-
-            # Step 1: OCR Extraction
-            await self.sse_manager.send_event(
-                document_id,
-                "status_update",
-                {"status": ProcessingStatus.OCR_STARTED, "message": "Starting OCR extraction"}
-            )
-
-            try:
-                if request.file_type == "pdf":
-                    pages = self.ocr_service.extract_text_from_pdf(file_path)
-                else:
-                    pages = self.ocr_service.extract_text_from_image(file_path)
-
-            except Exception as e:
-                logger.error(f"OCR extraction failed for {document_id}: {str(e)}")
-                raise Exception(f"OCR extraction failed: {str(e)}")
-            
-            await self.sse_manager.send_event(
-                document_id,
-                "status_update",
-                {
-                    "status": ProcessingStatus.OCR_COMPLETED,
-                    "message": f"OCR completed. Extracted {len(pages)} pages",
-                    "pages_extracted": len(pages)
-                }
-            )
-            
-            # Step 2: Process each page
-            page_results = []
-            for page_num, text in pages:
-                try:
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "page_started",
-                        {"page_number": page_num, "status": "processing"}
-                    )
-                    
-                    # Translation
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "status_update",
-                        {
-                            "status": ProcessingStatus.TRANSLATION_STARTED,
-                            "message": f"Translating page {page_num}",
-                            "page_number": page_num
-                        }
-                    )
-                    
-                    legal_english = await self.translation_service.translate_to_legal_english(
-                        text, page_num
-                    )
-                    
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "status_update",
-                        {
-                            "status": ProcessingStatus.TRANSLATION_COMPLETED,
-                            "message": f"Translation completed for page {page_num}",
-                            "page_number": page_num
-                        }
-                    )
-                    
-                    # Simplification
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "status_update",
-                        {
-                            "status": ProcessingStatus.SIMPLIFICATION_STARTED,
-                            "message": f"Simplifying page {page_num}",
-                            "page_number": page_num
-                        }
-                    )
-                    
-                    simple_english = await self.translation_service.simplify_text(
-                        legal_english, page_num
-                    )
-                    
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "status_update",
-                        {
-                            "status": ProcessingStatus.SIMPLIFICATION_COMPLETED,
-                            "message": f"Simplification completed for page {page_num}",
-                            "page_number": page_num
-                        }
-                    )
-                    
-                    page_data = PageData(
-                        page_number=page_num,
-                        original_text=text,
-                        legal_english=legal_english,
-                        simple_english=simple_english,
-                        status=ProcessingStatus.COMPLETED
-                    )
-                    page_results.append(page_data)
-                    
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "page_completed",
-                        {"page_number": page_num, "status": "completed"}
-                    )
-                
-                except Exception as e:
-                    logger.error(f"Error processing page {page_num} for {document_id}: {str(e)}")
-                    await self.sse_manager.send_event(
-                        document_id,
-                        "page_error",
-                        {"page_number": page_num, "error": str(e)}
-                    )
-                    # Continue with other pages
-            
-            # Step 3: Create summary
-            await self.sse_manager.send_event(
-                document_id,
-                "status_update",
-                {"status": "summary_started", "message": "Creating document summary"}
-            )
-            
-            try:
-                summary = await self.translation_service.create_document_summary(page_results)
-            except Exception as e:
-                logger.error(f"Summary creation failed for {document_id}: {str(e)}")
-                summary = "Summary creation failed"
-            
-            await self.sse_manager.send_event(
-                document_id,
-                "status_update",
-                {
-                    "status": ProcessingStatus.COMPLETED,
-                    "message": "Document processing completed",
-                    "summary": summary,
-                    "total_pages": len(page_results)
-                }
-            )
-            
-            logger.info(f"Document processing completed successfully: {document_id}")
-            
-        except Exception as e:
-            logger.error(f"Document processing failed for {document_id}: {str(e)}", exc_info=True)
-            await self.sse_manager.send_event(
-                document_id,
-                "error",
-                {
-                    "status": ProcessingStatus.FAILED,
-                    "message": f"Processing failed: {str(e)}"
-                }
-            )
-            raise
-    
     def get_sse_stream(self, document_id: str):
         """Get SSE stream for document updates"""
         logger.info(f"Establishing SSE stream for document: {document_id}")

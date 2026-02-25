@@ -229,6 +229,11 @@ def process_document_task(self, document_id: str, user_id: str):
                     "simple_english": raw_text,
                     "translation_error": str(page_exc),
                 })
+
+        if not any(r.get("original_text", "").strip() for r in results):
+            logger.error("[%s] OCR returned no text for any page. Possible bad scan or unsupported format.", document_id)
+            raise ValueError("No text could be extracted from this document using OCR. Please ensure the scan is clear.")
+
         return results
 
     try:
@@ -281,6 +286,10 @@ def process_document_task(self, document_id: str, user_id: str):
             for p in page_results
         )
 
+        if not full_text.strip():
+            logger.error("[%s] final full_text is empty!", document_id)
+            raise ValueError("Final processed text is empty. Processing failed.")
+
         ai_doc = {
             "report_id":         ObjectId(report_id),
             "original_file_id":  ObjectId(document_id),
@@ -296,7 +305,12 @@ def process_document_task(self, document_id: str, user_id: str):
             ai_doc,
             upsert=True,
         )
-        logger.info("[%s] Saved to ai_extracted_content", document_id)
+        # ALSO update original_files.file_content for legacy compatibility with reports.py analysis
+        db["original_files"].update_one(
+            {"_id": ObjectId(document_id)},
+            {"$set": {"file_content": full_text}}
+        )
+        logger.info("[%s] Saved to ai_extracted_content and updated file_content (%d chars)", document_id, len(full_text))
 
     except Exception as exc:
         logger.error("[%s] DB persist failed: %s", document_id, exc, exc_info=True)

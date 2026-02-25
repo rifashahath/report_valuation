@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ValuationReport, ReportStatus } from '../types';
 import { mockReports, mockDashboardStats } from '../data/mockData';
 
 interface AppState {
     currentPage: string;
     selectedReportId: string | null;
+    currentUploadReportId: string | null;
     reports: ValuationReport[];
     dashboardStats: typeof mockDashboardStats;
 }
@@ -12,6 +13,7 @@ interface AppState {
 interface AppContextType extends AppState {
     setCurrentPage: (page: string) => void;
     setSelectedReportId: (id: string | null) => void;
+    setCurrentUploadReportId: (id: string | null) => void;
     updateReport: (reportId: string, content: ValuationReport['content']) => void;
     updateReportStatus: (reportId: string, status: ReportStatus) => void;
     addReport: (report: ValuationReport) => void;
@@ -24,6 +26,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<AppState>({
         currentPage: 'dashboard',
         selectedReportId: null,
+        currentUploadReportId: localStorage.getItem('current_upload_report_id'),
         reports: mockReports,
         dashboardStats: mockDashboardStats,
     });
@@ -34,6 +37,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
     const setSelectedReportId = (id: string | null) => {
         setState(prev => ({ ...prev, selectedReportId: id }));
+    };
+
+    const setCurrentUploadReportId = (id: string | null) => {
+        if (id) {
+            localStorage.setItem('current_upload_report_id', id);
+        } else {
+            localStorage.removeItem('current_upload_report_id');
+        }
+        setState(prev => ({ ...prev, currentUploadReportId: id }));
     };
 
     const updateReport = (reportId: string, content: ValuationReport['content']) => {
@@ -75,6 +87,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         selectedReport: getSelectedReport(),
         setCurrentPage,
         setSelectedReportId,
+        setCurrentUploadReportId,
         updateReport,
         updateReportStatus,
         addReport,

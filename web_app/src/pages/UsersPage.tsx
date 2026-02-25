@@ -134,28 +134,30 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 lg:p-10">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900/50 p-6 lg:p-8 animate-in fade-in duration-500">
+      <div className="max-w-[1600px] mx-auto space-y-8">
         <UserHeader
           totalUsers={stats.total}
           rolesCount={stats.rolesCount}
           adminsCount={stats.admins}
         />
 
-        <UserActionBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onAddClick={handleAddClick}
-        />
+        <div className="space-y-6">
+          <UserActionBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onAddClick={handleAddClick}
+          />
 
-        <UserTable
-          users={filteredUsers}
-          isLoading={isLoading}
-          searchTerm={searchTerm}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteInitial}
-          onAddClick={handleAddClick}
-        />
+          <UserTable
+            users={filteredUsers}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteInitial}
+            onAddClick={handleAddClick}
+          />
+        </div>
 
         <UserModal
           isOpen={isModalOpen}

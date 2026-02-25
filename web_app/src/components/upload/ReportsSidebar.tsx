@@ -32,7 +32,7 @@ export default function ReportsSidebar({ selectedReportId, onReportSelect }: Rep
     const reports = reportsData?.reports || [];
 
     return (
-        <div className="h-full bg-white border-r border-secondary-200 flex flex-col">
+        <div className="h-full bg-white dark:bg-slate-900 flex flex-col">
             {/* Header */}
             <div className="p-6 border-b border-secondary-800 bg-secondary-900">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2 tracking-tight">
@@ -69,7 +69,7 @@ export default function ReportsSidebar({ selectedReportId, onReportSelect }: Rep
                                             ? 'text-brand-900'
                                             : 'text-secondary-900 group-hover:text-brand-800'
                                             }`}>
-                                            {report.report_name}
+                                            {report.name}
                                         </h3>
                                         {report.bank_name && (
                                             <p className="text-sm text-secondary-500 mt-1 truncate">

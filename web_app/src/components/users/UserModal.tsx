@@ -33,7 +33,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                 first_name: user.first_name,
                 last_name: user.last_name,
                 email: user.email,
-                password: '', // Password stays empty in edit mode unless explicitly changed
+                password: '',
                 role: user.roles?.[0] || '',
             });
         } else {
@@ -51,44 +51,31 @@ export const UserModal: React.FC<UserModalProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Basic validation
-        if (!form.first_name || !form.last_name || !form.email || (!user && !form.password) || !form.role) {
-            return; // Validation should be handled via toast or browser defaults in a real app
-        }
-
-        const submissionData = user
-            ? { ...form, id: user.id }
-            : { ...form };
-
-        // Remove password from edit if empty
-        if (user && !form.password) {
-            delete (submissionData as any).password;
-        }
-
+        const submissionData = user ? { ...form, id: user.id } : { ...form };
+        if (user && !form.password) delete (submissionData as any).password;
         await onSubmit(submissionData);
     };
 
     const isEdit = !!user;
 
     return (
-        <div className="fixed inset-0 bg-secondary-950/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div
-                className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200"
+                className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-lg shadow-xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-xl font-semibold text-secondary-900">
-                            {isEdit ? 'Edit User' : 'Create New User'}
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                            {isEdit ? 'Edit User' : 'Create User'}
                         </h2>
-                        <p className="text-sm text-secondary-600 mt-1">
-                            {isEdit ? 'Update user information and permissions' : 'Add a new user to the system'}
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {isEdit ? 'Update permissions and details' : 'Add a new member to the team'}
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="h-10 w-10 rounded-full hover:bg-secondary-100 flex items-center justify-center transition-colors text-secondary-400 hover:text-secondary-600"
+                        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -97,21 +84,21 @@ export const UserModal: React.FC<UserModalProps> = ({
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-secondary-700">First Name *</label>
+                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">First Name</label>
                             <input
                                 required
                                 placeholder="John"
-                                className="w-full border border-secondary-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition"
+                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
                                 value={form.first_name}
                                 onChange={e => setForm({ ...form, first_name: e.target.value })}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-secondary-700">Last Name *</label>
+                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Last Name</label>
                             <input
                                 required
                                 placeholder="Doe"
-                                className="w-full border border-secondary-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition"
+                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
                                 value={form.last_name}
                                 onChange={e => setForm({ ...form, last_name: e.target.value })}
                             />
@@ -119,41 +106,36 @@ export const UserModal: React.FC<UserModalProps> = ({
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-secondary-700">Email Address *</label>
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
                         <input
                             required
                             type="email"
                             placeholder="john@example.com"
-                            className="w-full border border-secondary-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
                             value={form.email}
                             onChange={e => setForm({ ...form, email: e.target.value })}
                         />
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-secondary-700">
-                            {isEdit ? 'New Password' : 'Password *'}
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            {isEdit ? 'New Password (Optional)' : 'Password'}
                         </label>
                         <input
                             required={!isEdit}
                             type="password"
                             placeholder={isEdit ? 'Leave blank to keep current' : '••••••••'}
-                            className="w-full border border-secondary-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
                             value={form.password}
                             onChange={e => setForm({ ...form, password: e.target.value })}
                         />
-                        {isEdit && (
-                            <p className="text-xs text-secondary-500 italic mt-1">
-                                Only fill this in if you want to change the user's password
-                            </p>
-                        )}
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-secondary-700">Primary Role *</label>
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Role</label>
                         <select
                             required
-                            className="w-full border border-secondary-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition bg-white appearance-none"
+                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white appearance-none"
                             value={form.role}
                             onChange={e => setForm({ ...form, role: e.target.value })}
                         >
@@ -166,28 +148,28 @@ export const UserModal: React.FC<UserModalProps> = ({
                         </select>
                     </div>
 
-                    <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-secondary-100">
+                    <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2.5 border border-secondary-300 text-secondary-700 rounded-lg hover:bg-secondary-50 transition font-medium"
+                            className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className={`px-5 py-2.5 ${isEdit ? 'bg-success-600 hover:bg-success-700' : 'bg-brand-600 hover:bg-brand-700'} text-white rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+                            className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-slate-900/10 flex items-center gap-2"
                         >
                             {isLoading ? (
                                 <>
-                                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    {isEdit ? 'Saving...' : 'Creating...'}
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Saving...</span>
                                 </>
                             ) : (
                                 <>
-                                    {isEdit ? <Save size={18} /> : <UserPlus size={18} />}
-                                    {isEdit ? 'Save Changes' : 'Create User'}
+                                    {isEdit ? <Save size={16} /> : <UserPlus size={16} />}
+                                    <span>{isEdit ? 'Save Changes' : 'Create User'}</span>
                                 </>
                             )}
                         </button>

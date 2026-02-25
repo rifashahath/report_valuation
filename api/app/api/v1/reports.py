@@ -189,14 +189,17 @@ async def import_report_files(
         file_id   = file_doc["id"]
         file_path = file_doc.get("file_path")
 
-        # Skip only files that are actively in-flight RIGHT NOW or already done.
-        # Intermediate states (ocr_started, summarising, etc.) could be stale
-        # if a worker crashed — so we re-queue them so the user can retry.
         current_status = file_doc.get("processing_status", "")
-        if current_status in ("queued", "processing", "completed"):
+        # Check if we actually HAVE content (not just an empty string or whitespace)
+        file_content   = file_doc.get("file_content", "")
+        has_content    = bool(file_content and file_content.strip())
+
+        # Skip only if processing is actively in flight OR already successfully completed with content.
+        # If status is "completed" but content is missing, we re-queue it (likely a stale/failed job).
+        if current_status in ("queued", "processing") or (current_status == "completed" and has_content):
             skipped_files.append({
                 "file_id": file_id,
-                "reason": f"Already {current_status}"
+                "reason": f"Already {current_status}" if has_content or current_status != "completed" else "Already completed with content"
             })
             continue
 
@@ -250,13 +253,16 @@ async def analyze_and_summarize(
 ):
     """Analyze imported report documents using OpenAI"""
     try:
+        logger.info("Received analysis request for report_id: %s", payload.report_id)
         # Validate report
         report = ReportRepository.get_by_id(payload.report_id)
         if not report:
+            logger.error("Report %s not found in DB", payload.report_id)
             raise HTTPException(
                 status_code=404,
                 detail="Report not found"
             )
+        logger.info("Found report: %s (ID: %s)", report.get("report_name"), report.get("id"))
 
         if (
             report["user_id"] != current_user["id"]
@@ -269,27 +275,44 @@ async def analyze_and_summarize(
 
         # Fetch imported files
         files = OriginalFileRepository.get_by_report(payload.report_id)
+        logger.info("Analysis for report %s: found %d files", payload.report_id, len(files))
 
-        # Collect file contents
         contents = []
         for file in files:
-            file_content = file.get("file_content")
-            if file_content and file_content.strip():
+            file_content = file.get("file_content", "")
+            has_content = bool(file_content and file_content.strip())
+            
+            logger.info("File %s status: %s, has_content: %s", 
+                        file.get("file_name"), 
+                        file.get("processing_status"), 
+                        has_content)
+            
+            if has_content:
                 contents.append(
                     f"===== DOCUMENT: {file.get('file_name')} =====\n{file_content}"
                 )
 
         if not contents:
+            logger.warning("No contents found for report %s after checking %d files", payload.report_id, len(files))
             raise HTTPException(
                 status_code=400,
-                detail="No imported document content found. Please run import before analysis."
+                detail=f"No processed content found for report {payload.report_id}. Please wait for document processing to finish."
             )
 
         # Merge all document contents
         merged_content = "\n\n".join(contents)
 
         # Analyze using LLM
-        summarized_content = llm_service.summarize(merged_content)
+        try:
+            summarized_content = llm_service.summarize(merged_content)
+        except Exception as e:
+            if "invalid_api_key" in str(e).lower() or "401" in str(e):
+                logger.error("OpenAI Authentication failed: %s", e)
+                raise HTTPException(
+                    status_code=503,
+                    detail="AI services are currently unavailable due to an invalid configuration (API Key). Please check server settings."
+                )
+            raise e
 
         # Save analysis
         AIExtractedContentRepository.save_analysis(
@@ -307,9 +330,10 @@ async def analyze_and_summarize(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to analyze report {payload.report_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="Failed to analyze report"
+            detail=f"Internal error during analysis: {str(e)}"
         )
 
 
@@ -365,11 +389,72 @@ async def get_report(
         raise HTTPException(status_code=403, detail="Access denied")
 
     files = OriginalFileRepository.get_by_report(report_id)
+    analysis = AIExtractedContentRepository.get_by_report(report_id)
 
     return {
         "success": True,
         "report": report,
         "files": files,
+        "analysis": analysis
+    }
+
+
+@router.get("/reports/{report_id}/status")
+async def get_report_status(
+    report_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Consolidated status for a report and all its documents.
+    Used for frontend polling.
+    """
+    report = ReportRepository.get_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if (
+        report["user_id"] != current_user["id"]
+        and "admin" not in current_user.get("roles", [])
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    files = OriginalFileRepository.get_by_report(report_id)
+    
+    # Check if AI analysis exists
+    analysis = AIExtractedContentRepository.get_by_report(report_id)
+    
+    # Determine overall status
+    if not files:
+        overall_status = "empty"
+    elif all(f.get("processing_status") == "completed" for f in files) and analysis:
+        overall_status = "completed"
+    elif any(f.get("processing_status") == "failed" for f in files):
+        overall_status = "failed"
+    else:
+        overall_status = "processing"
+
+    # Count progress
+    completed_files = sum(1 for f in files if f.get("processing_status") == "completed")
+    total_files = len(files)
+    
+    return {
+        "report_id": report_id,
+        "status": overall_status,
+        "progress": {
+            "completed": completed_files,
+            "total": total_files,
+            "percentage": (completed_files / total_files * 100) if total_files > 0 else 0
+        },
+        "files": [
+            {
+                "id": f["id"],
+                "name": f["file_name"],
+                "status": f.get("processing_status", "pending"),
+                "error": f.get("error_message")
+            } for f in files
+        ],
+        "has_analysis": bool(analysis),
+        "updated_at": datetime.utcnow().isoformat()
     }
 
 

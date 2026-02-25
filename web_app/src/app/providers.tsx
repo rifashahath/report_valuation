@@ -2,9 +2,10 @@
 import { ReactNode, createContext, useContext, useState } from "react";
 
 interface AppContextType {
-  // keep this minimal and future-proof
   user: null | { id: string; name: string };
   setUser: (user: AppContextType["user"]) => void;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -23,12 +24,31 @@ interface AppProviderProps {
 
 export function AppProvider({ children }: AppProviderProps) {
   const [user, setUser] = useState<AppContextType["user"]>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
+
+  // Initialize theme class on mount
+  useState(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  });
 
   return (
     <AppContext.Provider
       value={{
         user,
         setUser,
+        theme,
+        toggleTheme,
       }}
     >
       {children}

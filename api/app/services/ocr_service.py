@@ -17,13 +17,16 @@ class OCRService:
     ) -> List[Tuple[int, str]]:
         pages = convert_from_path(pdf_path, dpi=dpi)
         results = []
+        import logging
+        logger = logging.getLogger(__name__)
 
         for i, page in enumerate(pages, start=1):
             text = pytesseract.image_to_string(
                 page,
                 lang=self.lang
-            )
-            results.append((i, text.strip()))
+            ).strip()
+            logger.info("OCR Page %d: extracted %d characters", i, len(text))
+            results.append((i, text))
 
         return results
 
