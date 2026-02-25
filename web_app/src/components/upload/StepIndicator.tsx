@@ -6,45 +6,59 @@ interface StepIndicatorProps {
 
 export default function StepIndicator({ currentStep }: StepIndicatorProps) {
     const steps = [
-        { num: 1, label: 'Project Name', icon: FolderOpen },
-        { num: 2, label: 'Upload Files', icon: UploadIcon },
-        { num: 3, label: 'Select Files', icon: FileStack },
+        { num: 1, label: 'Project', icon: FolderOpen },
+        { num: 2, label: 'Upload', icon: UploadIcon },
+        { num: 3, label: 'Select', icon: FileStack },
         { num: 4, label: 'Process', icon: BarChart3 },
-        { num: 5, label: 'Complete', icon: CheckCircle }
+        { num: 5, label: 'Results', icon: CheckCircle }
     ];
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-secondary-200 p-6 mb-8">
-            <div className="flex items-center justify-between">
-                {steps.map((step, idx) => (
-                    <div key={step.num} className="flex items-center flex-1">
-                        <div className="flex flex-col items-center flex-1">
+        <div className="w-full max-w-3xl mx-auto px-4">
+            <div className="relative flex items-center justify-between">
+                {/* Connecting Line - Background */}
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -z-10" />
+
+                {/* Connecting Line - Progress */}
+                <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-600 dark:bg-blue-500 transition-all duration-500 -z-10"
+                    style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+                />
+
+                {steps.map((step) => {
+                    const isActive = currentStep >= step.num;
+                    const isCompleted = currentStep > step.num;
+                    const isCurrent = currentStep === step.num;
+
+                    return (
+                        <div key={step.num} className="flex flex-col items-center gap-2 bg-white dark:bg-slate-900 px-2">
                             <div
-                                className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${currentStep > step.num
-                                    ? 'bg-success-500 text-white'
-                                    : currentStep === step.num
-                                        ? 'bg-brand-600 text-white ring-4 ring-brand-100'
-                                        : 'bg-secondary-200 text-secondary-500'
-                                    }`}
+                                className={`
+                                    w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2
+                                    ${isCompleted
+                                        ? 'bg-blue-600 border-blue-600 text-white'
+                                        : isCurrent
+                                            ? 'bg-white dark:bg-slate-800 border-blue-600 text-blue-600 scale-110 shadow-lg shadow-blue-500/20'
+                                            : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400'
+                                    }
+                                `}
                             >
-                                {currentStep > step.num ? <CheckCircle size={24} /> : <step.icon size={24} />}
+                                {isCompleted ? <CheckCircle size={18} /> : <step.icon size={18} />}
                             </div>
                             <span
-                                className={`text-sm font-medium ${currentStep >= step.num ? 'text-secondary-900' : 'text-secondary-500'
-                                    }`}
+                                className={`
+                                    text-xs font-medium transition-colors duration-300 absolute -bottom-6 w-20 text-center
+                                    ${isActive ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}
+                                `}
                             >
                                 {step.label}
                             </span>
                         </div>
-                        {idx < 4 && (
-                            <div
-                                className={`h-1 flex-1 mx-2 mb-8 rounded transition-all ${currentStep > step.num ? 'bg-success-500' : 'bg-secondary-200'
-                                    }`}
-                            />
-                        )}
-                    </div>
-                ))}
+                    );
+                })}
             </div>
+            {/* Spacer for labels */}
+            <div className="h-6" />
         </div>
     );
 }

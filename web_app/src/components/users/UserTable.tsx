@@ -21,31 +21,31 @@ export const UserTable: React.FC<UserTableProps> = ({
 }) => {
     if (isLoading) {
         return (
-            <div className="bg-white rounded-xl border border-secondary-200 p-12 text-center shadow-sm">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mb-4"></div>
-                <p className="text-secondary-600">Loading users...</p>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Loading users...</p>
             </div>
         );
     }
 
     if (users.length === 0) {
         return (
-            <div className="bg-white rounded-xl border border-secondary-200 p-12 text-center shadow-sm">
-                <div className="h-16 w-16 mx-auto bg-secondary-100 rounded-full flex items-center justify-center mb-4">
-                    <Users className="h-8 w-8 text-secondary-400" />
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+                <div className="h-12 w-12 mx-auto bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                    <Users className="h-6 w-6 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-medium text-secondary-900 mb-2">
+                <h3 className="text-base font-medium text-slate-900 dark:text-white mb-1">
                     {searchTerm ? 'No matching users found' : 'No users yet'}
                 </h3>
-                <p className="text-secondary-600 mb-6 max-w-sm mx-auto">
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 max-w-sm mx-auto">
                     {searchTerm ? 'Try a different search term' : 'Get started by adding your first user'}
                 </p>
                 {!searchTerm && (
                     <button
                         onClick={onAddClick}
-                        className="inline-flex items-center gap-2 bg-brand-600 text-white px-5 py-2.5 rounded-lg hover:bg-brand-700 transition"
+                        className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
                     >
-                        <Plus size={18} />
+                        <Plus size={16} />
                         Add First User
                     </button>
                 )}
@@ -54,49 +54,37 @@ export const UserTable: React.FC<UserTableProps> = ({
     }
 
     return (
-        <div className="bg-white rounded-xl border border-secondary-200 overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-                <table className="w-full">
-                    <thead className="bg-secondary-50 border-b border-secondary-100">
-                        <tr>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-secondary-700 uppercase tracking-wider">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                                 User
                             </th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-secondary-700 uppercase tracking-wider">
-                                Contact
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                Role
                             </th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-secondary-700 uppercase tracking-wider">
-                                Roles
-                            </th>
-                            <th className="px-6 py-4 text-right text-xs font-semibold text-secondary-700 uppercase tracking-wider">
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide text-right">
                                 Actions
                             </th>
                         </tr>
                     </thead>
-
-                    <tbody className="divide-y divide-secondary-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {users.map((user) => (
-                            <tr key={user.id} className="hover:bg-secondary-50/50 transition-colors">
+                            <tr key={user.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                 <td className="px-6 py-4">
-                                    <div className="flex items-center">
-                                        <div className="h-10 w-10 bg-brand-100 rounded-full flex items-center justify-center mr-3">
-                                            <span className="font-medium text-brand-800">
-                                                {user.first_name?.[0]?.toUpperCase()}
-                                                {user.last_name?.[0]?.toUpperCase()}
-                                            </span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 font-medium text-sm">
+                                            {user.first_name?.[0]?.toUpperCase()}
+                                            {user.last_name?.[0]?.toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="font-medium text-secondary-900">
+                                            <p className="text-sm font-medium text-slate-900 dark:text-white">
                                                 {user.first_name} {user.last_name}
                                             </p>
-                                            <p className="text-sm text-secondary-500 font-mono">ID: {user.id.substring(0, 8)}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{user.email}</p>
                                         </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div>
-                                        <p className="text-secondary-900">{user.email}</p>
-                                        <p className="text-sm text-secondary-500">System account</p>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
@@ -105,36 +93,34 @@ export const UserTable: React.FC<UserTableProps> = ({
                                             user.roles.map((role) => (
                                                 <span
                                                     key={role}
-                                                    className={`px-3 py-1 text-xs font-medium rounded-full ${role === 'admin'
-                                                        ? 'bg-red-100 text-red-800'
-                                                        : role === 'editor'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-brand-100 text-brand-800'
+                                                    className={`px-2.5 py-1 text-xs font-medium rounded-full border ${role === 'admin'
+                                                        ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800'
+                                                        : 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
                                                         }`}
                                                 >
-                                                    {role}
+                                                    {role.charAt(0).toUpperCase() + role.slice(1)}
                                                 </span>
                                             ))
                                         ) : (
-                                            <span className="text-sm text-gray-400 italic">No roles</span>
+                                            <span className="text-xs text-slate-400">No roles</span>
                                         )}
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <div className="flex justify-end gap-2">
+                                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => onEdit(user)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-brand-600 hover:text-brand-800 hover:bg-brand-50 rounded-lg transition-colors border border-transparent hover:border-brand-100"
+                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                            title="Edit user"
                                         >
                                             <Edit2 size={16} />
-                                            Edit
                                         </button>
                                         <button
                                             onClick={() => onDelete(user.id)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                            title="Delete user"
                                         >
                                             <Trash2 size={16} />
-                                            Delete
                                         </button>
                                     </div>
                                 </td>

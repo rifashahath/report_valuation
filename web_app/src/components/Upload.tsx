@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FolderOpen } from 'lucide-react';
+import { LayoutGrid, Plus, History, ChevronRight } from 'lucide-react';
+import { config } from '../config/config';
 
+// Components
 import StepIndicator from './upload/StepIndicator';
 import ProjectNameStep from './upload/ProjectNameStep';
 import UploadStep from './upload/UploadStep';
@@ -11,409 +13,359 @@ import CompletionStep from './upload/CompletionStep';
 import ReportsSidebar from './upload/ReportsSidebar';
 import ReportDetailView from './upload/ReportDetailView';
 
+// Types
 import { UploadedFile, ProjectReport } from './upload/types';
-import { useCreateReport, useReport } from '../hooks/useReports';
-import { reportsApi } from '../apis/report.api';
 
-// Helper to format file size
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+// Hooks & APIs
+import { useCreateReport, useReport } from '../hooks/useReports';
+import { useProcessMultipleDocuments } from '../hooks/useDocuments';
+import { reportsApi } from '../apis/report.api';
+import { useAppStore } from '../store/useAppStore';
+
+// Types
+type ViewMode = 'upload' | 'browse';
 
 export default function Upload() {
+  // ==================== STATE ====================
+
+  // View Management
+  const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Project Information
   const [projectName, setProjectName] = useState('');
   const [bankName, setBankName] = useState('');
+
+  // File Management
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'upload' | 'browse'>('upload');
+
+  // Browse Mode
   const [selectedBrowseReportId, setSelectedBrowseReportId] = useState<string | null>(null);
   const [recentProjects] = useState<ProjectReport[]>([]);
 
-  const createReportMutation = useCreateReport();
+  // ==================== HOOKS ====================
 
-  // URL-based state persistence
   const { reportId: urlReportId } = useParams<{ reportId?: string }>();
   const navigate = useNavigate();
 
-  // Track if we've already restored from URL to avoid re-running
-  const restoredRef = useRef(false);
+  const { currentUploadReportId: reportId, setCurrentUploadReportId: setReportId } = useAppStore();
+  const { data: reportData, isLoading: isLoadingReport } = useReport(urlReportId);
+  const createReportMutation = useCreateReport();
+  const processMultipleMutation = useProcessMultipleDocuments();
 
-  const {
-    data: reportData,
-    isLoading: isLoadingReport,
-    isError: isReportError,
-    error: reportError,
-  } = useReport(urlReportId);
+  // ==================== EFFECTS ====================
 
-  // Restore state from URL on mount or when report data loads (only once)
+  // Initialize from URL report
   useEffect(() => {
-    if (urlReportId && reportData && !isLoadingReport && !restoredRef.current) {
-      restoredRef.current = true;
+    if (!urlReportId || !reportData || isLoadingReport) return;
 
-      const report = reportData.report;
-      setProjectName(report.report_name || '');
-      setBankName(report.bank_name || '');
-
-      // Check if analysis already exists
-      const checkAnalysis = async () => {
-        try {
-          const analysisResponse = await reportsApi.getReportAnalysis(report.id);
-          if (analysisResponse && analysisResponse.analysis) {
-            setAnalysisResult(analysisResponse.analysis);
-            setCurrentStep(5); // analysis exists -> completion
-          } else {
-            setCurrentStep(2); // no analysis yet -> upload
-          }
-        } catch {
-          setCurrentStep(2); // no analysis -> upload
-        }
-      };
-
-      checkAnalysis();
-    }
+    initializeFromExistingReport(reportData);
   }, [urlReportId, reportData, isLoadingReport]);
 
-  // Handle invalid report IDs
-  useEffect(() => {
-    if (isReportError && urlReportId) {
-      console.error('Failed to load report:', reportError);
-      alert("Failed to load report. It may have been deleted or you don't have access.");
-      navigate('/upload');
-      setProjectName('');
-      setBankName('');
-      setFiles([]);
-      setSelectedFiles([]);
-      setAnalysisResult(null);
-      setCurrentStep(1);
-    }
-  }, [isReportError, urlReportId, navigate, reportError]);
+  // ==================== INITIALIZATION ====================
 
+  const initializeFromExistingReport = async (report: typeof reportData) => {
+    setReportId(report.id);
+    setProjectName(report.name);
+    setBankName(report.bank_name || '');
+
+    try {
+      const analysisResponse = await reportsApi.analyzeReport(report.id);
+
+      if (analysisResponse?.analysis) {
+        setAnalysisResult(analysisResponse.analysis);
+        setCurrentStep(5);
+      } else {
+        setCurrentStep(2);
+      }
+    } catch (error) {
+      console.log('No analysis found for this report yet');
+      setCurrentStep(2);
+    }
+  };
+
+  // ==================== STEP HANDLERS ====================
+
+  // Step 1: Create Report
   const handleCreateReport = async () => {
+    if (!projectName.trim()) {
+      alert('Please enter a project name');
+      return;
+    }
+
     try {
       const response = await createReportMutation.mutateAsync({
         name: projectName,
         bank_name: bankName,
       });
 
-      // createReport returns { id, report_name, created_at } directly
-      const createdId = (response as any).id;
+      const createdReport = 'id' in response ? response : (response as any).reports?.[0];
 
-      if (createdId) {
-        navigate(`/upload/${createdId}`); // persist in URL
-        setCurrentStep(2);
-      } else {
+      if (!createdReport?.id) {
         throw new Error('Report ID not found in response');
       }
-    } catch (err: any) {
-      console.error('Failed to create report', err);
-      alert(`Failed to create report: ${err.message || 'Unknown error'}`);
+
+      setReportId(createdReport.id);
+      navigate(`/upload/${createdReport.id}`);
+      setCurrentStep(2);
+    } catch (error) {
+      console.error('Failed to create report', error);
+      alert('Failed to create report. Please try another name.');
     }
   };
 
-  // Job progress state — keyed by job_id
-  const [jobProgress, setJobProgress] = useState<Record<string, {
-    status: string;
-    currentPage: number | null;
-    totalPages: number | null;
-    error?: string;
-  }>>({});
+  // Step 2: Upload Files
+  const handleFileUpload = async (newFiles: File[]) => {
+    const effectiveReportId = reportId || urlReportId;
 
-  /** Poll a single job until done; resolves with final status string */
-  const pollJob = (jobId: string): Promise<string> =>
-    new Promise((resolve) => {
-      const interval = setInterval(async () => {
-        try {
-          const data = await reportsApi.pollJobStatus(jobId);
-          const status = data.details?.processing_status ?? data.celery?.state ?? 'unknown';
-          setJobProgress((prev) => ({
-            ...prev,
-            [jobId]: {
-              status,
-              currentPage: data.details?.current_page ?? null,
-              totalPages: data.details?.total_pages ?? null,
-              error: data.details?.error_message ?? undefined,
-            },
-          }));
-          if (status === 'completed' || status === 'failed' || data.celery?.failed) {
-            clearInterval(interval);
-            resolve(status);
-          }
-        } catch (e) {
-          // network blip — keep polling
-        }
-      }, 3_000);
-    });
+    if (!effectiveReportId) {
+      alert('Report ID missing. Please restart the project.');
+      return;
+    }
 
-  // Helper to upload pending files
-  const uploadPendingFiles = async (): Promise<boolean> => {
-    const pendingFiles = files.filter(f => f.status === 'pending');
-    if (pendingFiles.length === 0) return true;
+    if (newFiles.length === 0) return;
 
-    const effectiveReportId = urlReportId;
-    if (!effectiveReportId) return false;
+    // Create temporary file entries
+    const tempFiles: UploadedFile[] = newFiles.map(file => ({
+      id: generateFileId(),
+      file,
+      status: 'uploading',
+      progress: 0,
+      uploadDate: new Date(),
+      fileSize: formatFileSize(file.size),
+    }));
 
-    // Set status to uploading
-    setFiles(prev => prev.map(f =>
-      pendingFiles.some(pf => pf.id === f.id)
-        ? { ...f, status: 'uploading', progress: 50 }
-        : f
-    ));
+    setFiles(prev => [...prev, ...tempFiles]);
 
     try {
-      const rawFiles = pendingFiles.map(f => f.file);
-      await reportsApi.uploadFiles(effectiveReportId, rawFiles);
+      // Update progress
+      updateFilesProgress(tempFiles.map(f => f.id), 50);
 
-      // Mark as completed
-      setFiles(prev => prev.map(f =>
-        pendingFiles.some(pf => pf.id === f.id)
-          ? { ...f, status: 'completed', progress: 100 }
-          : f
-      ));
-      return true;
-    } catch (err: any) {
-      console.error('Upload failed:', err);
-      setFiles(prev => prev.map(f =>
-        pendingFiles.some(pf => pf.id === f.id)
-          ? { ...f, status: 'error', progress: 0 }
-          : f
-      ));
-      alert('Failed to upload files. Please try again.');
-      return false;
+      // Upload files
+      const response = await reportsApi.uploadFiles(effectiveReportId, newFiles);
+
+      if (response && (response.success || (response as any).files)) {
+        const serverFiles = (response as any).files || response.documents || [];
+
+        setFiles(prev => prev.map(f => {
+          // Find matching server file by name
+          const match = serverFiles.find((sf: any) => sf.file_name === (f.name || f.file?.name));
+          if (match) {
+            return { ...f, serverFileId: match.id, status: 'completed', progress: 100 };
+          }
+          return f;
+        }));
+
+        updateFilesStatus(tempFiles.map(f => f.id), 'completed', 100);
+        setSelectedFiles(prev => [...prev, ...tempFiles.map(f => f.id)]);
+      } else {
+        throw new Error('Upload response invalid');
+      }
+    } catch (error) {
+      console.error('Upload failed', error);
+      updateFilesStatus(
+        tempFiles.map(f => f.id),
+        'error',
+        0,
+        'Upload failed'
+      );
     }
   };
 
+  // Step 3 -> 4: Import and Analyze
   const handleImportAndAnalyze = async () => {
-    if (selectedFiles.length === 0) return;
+    const effectiveReportId = reportId || urlReportId;
 
-    // Ensure pending files are uploaded
-    const uploadSuccess = await uploadPendingFiles();
-    if (!uploadSuccess) return;
+    if (selectedFiles.length === 0) {
+      alert('Please select at least one file.');
+      return;
+    }
 
-    const effectiveReportId = urlReportId;
     if (!effectiveReportId) {
-      alert('Report ID is missing. Please go back and create a report first.');
+      alert('Report ID is missing. Please restart or check the URL.');
       return;
     }
 
     setCurrentStep(4);
-    setJobProgress({});
 
     try {
-      // Mark files as processing in local state
-      setFiles((prev) =>
-        prev.map((f) =>
-          selectedFiles.includes(f.id) ? { ...f, status: 'processing', progress: 10 } : f
-        )
-      );
+      // 1. Trigger processing via backend
+      await reportsApi.importFiles(effectiveReportId);
 
-      // ── Step 1: Dispatch Celery jobs (returns instantly) ──────────────────
-      let importResponse;
-      try {
-        importResponse = await reportsApi.importFiles(effectiveReportId);
-      } catch (importErr: any) {
-        throw new Error(importErr.message || 'Failed to queue files for processing.');
-      }
+      // 2. Navigate to dedicated processing page
+      navigate(`/processing/${effectiveReportId}`);
 
-      if (!importResponse.success && !importResponse.job_ids?.length) {
-        throw new Error('No jobs were queued. Please try again.');
-      }
-
-      const jobIds = importResponse.job_ids ?? [];
-
-      if (jobIds.length === 0) {
-        // Everything was skipped (already processed)
-        const reasons = importResponse.skipped_files?.map((f) => f.reason).join('\n') ?? '';
-        if (reasons) alert(`Files skipped:\n${reasons}`);
-        setCurrentStep(3);
-        return;
-      }
-
-      // Initialise progress entries
-      setJobProgress(
-        Object.fromEntries(jobIds.map((id) => [id, { status: 'queued', currentPage: null, totalPages: null }]))
-      );
-
-      // Update file progress to 30%
-      setFiles((prev) =>
-        prev.map((f) =>
-          selectedFiles.includes(f.id) ? { ...f, progress: 30 } : f
-        )
-      );
-
-      // ── Step 2: Poll all jobs in parallel ────────────────────────────────
-      const finalStatuses = await Promise.all(jobIds.map(pollJob));
-
-      const anyFailed = finalStatuses.some((s) => s === 'failed');
-
-      // Update file progress to 80%
-      setFiles((prev) =>
-        prev.map((f) =>
-          selectedFiles.includes(f.id) ? { ...f, progress: 80 } : f
-        )
-      );
-
-      // ── Step 3: Trigger LLM analysis (non-fatal if it fails) ─────────────
-      try {
-        const analysisResponse = await reportsApi.analyzeReport(effectiveReportId);
-        if (analysisResponse?.analysis) {
-          setAnalysisResult(analysisResponse.analysis);
-        }
-      } catch (analysisErr: any) {
-        console.warn('Analysis step failed (non-fatal):', analysisErr.message);
-      }
-
-      // Mark files completed
-      setFiles((prev) =>
-        prev.map((f) =>
-          selectedFiles.includes(f.id)
-            ? { ...f, status: anyFailed ? 'error' : 'completed', progress: 100 }
-            : f
-        )
-      );
-
-      setCurrentStep(5);
     } catch (error: any) {
-      console.error('Error in import flow:', error);
-      alert(error.message || 'An error occurred during processing. Please try again.');
-      setFiles((prev) =>
-        prev.map((f) =>
-          selectedFiles.includes(f.id) ? { ...f, status: 'completed', progress: 100 } : f
-        )
-      );
-      setCurrentStep(3);
+      console.error('Import/Analyze workflow status:', error);
+      // For errors, still allow them to move forward so they aren't trapped
+      setCurrentStep(5);
     }
   };
 
-  // Add files to local state as 'pending' (do not upload yet)
-  const handleFileSelection = (rawFiles: File[]) => {
-    const newUploadedFiles: UploadedFile[] = rawFiles.map((file) => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      file,
-      fileSize: formatFileSize(file.size),
-      uploadDate: new Date(),
-      status: 'pending' as const,
-      progress: 0,
-    }));
+  // Step 5: Save and Navigate
+  const handleCreateProject = () => {
+    const effectiveReportId = reportId || urlReportId;
 
-    setFiles((prev) => [...prev, ...newUploadedFiles]);
-    setSelectedFiles((prev) => [...prev, ...newUploadedFiles.map((f) => f.id)]);
-  };
-
-  const handleUploadAndContinue = async () => {
-    // Check if we have any files at all
-    if (files.length === 0) {
-      alert("Please select at least one file.");
+    if (!effectiveReportId) {
+      alert('Report ID is missing. Cannot save report.');
       return;
     }
 
-    const success = await uploadPendingFiles();
-    if (success) {
-      setCurrentStep(3);
-    }
+    navigate(`/reports/${effectiveReportId}/edit`);
   };
 
-  const handleDownloadFile = async (file: UploadedFile) => {
-    if (file.serverFileId) {
-      try {
-        const blob = await reportsApi.downloadFile(file.serverFileId);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.file.name;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } catch (err) {
-        console.error('Download failed:', err);
-        alert('Failed to download file.');
+  // Reset and Start Over
+  const handleFinish = () => {
+    resetUploadState();
+    navigate('/upload');
+  };
+
+  // ==================== FILE OPERATIONS ====================
+
+  const handleDownload = async (file: UploadedFile) => {
+    const targetId = (file as any).serverFileId || file.id;
+
+    try {
+      const blob = await reportsApi.downloadFile(targetId);
+      downloadBlob(blob, file.name || file.file?.name || 'download');
+    } catch (error) {
+      console.error('File download failed', error);
+
+      // Fallback: download from local file object
+      if (file.file) {
+        const url = URL.createObjectURL(file.file);
+        downloadUrl(url, file.file.name);
+        URL.revokeObjectURL(url);
       }
     }
   };
 
-  const handleFinish = () => {
+  // ==================== UTILITY FUNCTIONS ====================
+
+  const generateFileId = () => Math.random().toString(36).substr(2, 9);
+
+  const formatFileSize = (bytes: number): string => {
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const updateFilesProgress = (fileIds: string[], progress: number) => {
+    setFiles(prev =>
+      prev.map(f => (fileIds.includes(f.id) ? { ...f, progress } : f))
+    );
+  };
+
+  const updateFilesStatus = (
+    fileIds: string[],
+    status: UploadedFile['status'],
+    progress?: number,
+    error?: string
+  ) => {
+    setFiles(prev =>
+      prev.map(f =>
+        fileIds.includes(f.id)
+          ? { ...f, status, ...(progress !== undefined && { progress }), ...(error && { error }) }
+          : f
+      )
+    );
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    downloadUrl(url, filename);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadUrl = (url: string, filename: string) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const resetUploadState = () => {
     setProjectName('');
     setBankName('');
     setFiles([]);
     setSelectedFiles([]);
     setAnalysisResult(null);
+    setReportId(null);
     setCurrentStep(1);
-    restoredRef.current = false;
-    navigate('/upload');
   };
 
-  const startNewProject = () => {
-    handleFinish();
-  };
-
-  const handleReportSelect = (id: string) => {
-    setSelectedBrowseReportId(id);
-  };
+  // ==================== RENDER ====================
 
   return (
-    <div className="min-h-screen bg-secondary-50">
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-secondary-900 mb-2 tracking-tight">
-              Document Analysis Platform
-            </h1>
-            <p className="text-secondary-500">
-              Process Tamil land documents with intelligent analysis
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700">
+        <div className="w-full mx-auto px-2 sm:px-3 lg:px-4 py-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Title */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg flex items-center justify-center">
+                <Plus className="text-white" size={24} />
+              </div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                New Report
+              </h1>
+            </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setViewMode('upload')}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${viewMode === 'upload'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
-                }`}
-            >
-              Upload New
-            </button>
+            {/* Step Indicator */}
+            {viewMode === 'upload' && (
+              <div className="mt-6">
+                <StepIndicator currentStep={currentStep} />
+              </div>
+            )}
 
-            <button
-              onClick={() => setViewMode('browse')}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${viewMode === 'browse'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300'
-                }`}
-            >
-              <FolderOpen size={20} />
-              Browse Reports
-            </button>
+            {/* View Mode Toggle */}
+            <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <button
+                onClick={() => setViewMode('upload')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${viewMode === 'upload'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+              >
+                <LayoutGrid size={16} />
+                Wizard
+              </button>
+              <button
+                onClick={() => setViewMode('browse')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${viewMode === 'browse'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+              >
+                <History size={16} />
+                History
+              </button>
+            </div>
           </div>
         </div>
+      </header>
 
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-8">
         {viewMode === 'browse' ? (
-          <div
-            className="bg-white rounded-2xl shadow-xl overflow-hidden"
-            style={{ height: 'calc(100vh - 220px)' }}
-          >
-            <div className="grid grid-cols-12 h-full">
-              <div className="col-span-4 border-r border-secondary-200 overflow-hidden">
-                <ReportsSidebar
-                  selectedReportId={selectedBrowseReportId}
-                  onReportSelect={handleReportSelect}
-                />
-              </div>
-
-              <div className="col-span-8 overflow-hidden">
-                <ReportDetailView reportId={selectedBrowseReportId} />
-              </div>
+          /* Browse Mode - History View */
+          <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 h-[calc(100vh-16rem)]">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <ReportsSidebar
+                selectedReportId={selectedBrowseReportId}
+                onReportSelect={setSelectedBrowseReportId}
+              />
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <ReportDetailView reportId={selectedBrowseReportId} />
             </div>
           </div>
         ) : (
-          <>
-            <StepIndicator currentStep={currentStep} />
-
+          /* Upload Wizard Mode */
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {currentStep === 1 && (
               <ProjectNameStep
                 projectName={projectName}
@@ -429,15 +381,11 @@ export default function Upload() {
               <UploadStep
                 projectName={projectName}
                 files={files}
-                onFilesChange={(newFilesList) => {
-                  const newIds = new Set(newFilesList.map((f) => f.id));
-                  setFiles(newFilesList);
-                  setSelectedFiles((prev) => prev.filter((id) => newIds.has(id)));
-                }}
-                onUpload={handleFileSelection}
-                onNext={handleUploadAndContinue}
+                onFilesChange={setFiles}
+                onUpload={handleFileUpload}
+                onDownload={handleDownload}
+                onNext={() => setCurrentStep(3)}
                 onBack={() => setCurrentStep(1)}
-                onDownload={handleDownloadFile}
               />
             )}
 
@@ -447,15 +395,29 @@ export default function Upload() {
                 selectedFiles={selectedFiles}
                 setSelectedFiles={setSelectedFiles}
                 onFilesChange={setFiles}
-                onUpload={handleFileSelection}
+                onUpload={handleFileUpload}
+                onDownload={handleDownload}
                 onBack={() => setCurrentStep(2)}
                 onNext={handleImportAndAnalyze}
-                onDownload={handleDownloadFile}
               />
             )}
 
             {currentStep === 4 && (
-              <ProcessingStep files={files} selectedFiles={selectedFiles} jobProgress={jobProgress} />
+              <div className="flex flex-col gap-6">
+                <ProcessingStep
+                  files={files}
+                  selectedFiles={selectedFiles}
+                />
+                <div className="flex justify-center pb-8">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center gap-2 text-slate-500 hover:text-brand-600 transition-all font-medium text-sm group"
+                  >
+                    <span>Processing in background — click here to return to Dashboard</span>
+                    <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </div>
             )}
 
             {currentStep === 5 && (
@@ -463,13 +425,13 @@ export default function Upload() {
                 files={files}
                 selectedFiles={selectedFiles}
                 analysisResult={analysisResult}
-                onSave={handleFinish}
-                onRestart={startNewProject}
+                onSave={handleCreateProject}
+                onRestart={handleFinish}
               />
             )}
-          </>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

@@ -3,257 +3,346 @@ import { Plus, Trash2, FileText, ChevronUp, ChevronDown, X, BarChart3, ArrowRigh
 import { UploadedFile } from './types';
 
 interface FileSelectionStepProps {
-    files: UploadedFile[];
-    selectedFiles: string[];
-    setSelectedFiles: (ids: string[]) => void;
-    onFilesChange: (files: UploadedFile[]) => void; // needed for Add More
-    onBack: () => void;
-    onNext: () => void;
-    onUpload: (files: File[]) => void;
-    onDownload: (file: UploadedFile) => void;
+  files: UploadedFile[];
+  selectedFiles: string[];
+  setSelectedFiles: (ids: string[]) => void;
+  onFilesChange: (files: UploadedFile[]) => void;
+  onBack: () => void;
+  onNext: () => void;
+  onUpload: (files: File[]) => void;
+  onDownload: (file: UploadedFile) => void;
 }
 
 export default function FileSelectionStep({
-    files,
-    selectedFiles,
-    setSelectedFiles,
-    onFilesChange,
-    onBack,
-    onNext,
-    onUpload,
-    onDownload
+  files,
+  selectedFiles,
+  setSelectedFiles,
+  onFilesChange,
+  onBack,
+  onNext,
+  onUpload,
+  onDownload
 }: FileSelectionStepProps) {
-    const [expandedFile, setExpandedFile] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expandedFile, setExpandedFile] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    };
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
-
-
-    const toggleFileSelection = (id: string) => {
-        setSelectedFiles(
-            selectedFiles.includes(id)
-                ? selectedFiles.filter((fileId) => fileId !== id)
-                : [...selectedFiles, id]
-        );
-    };
-
-    const selectAllFiles = () => {
-        setSelectedFiles(selectedFiles.length === files.length ? [] : files.map((file) => file.id));
-    };
-
-    const removeFile = (id: string) => {
-        const newFiles = files.filter(f => f.id !== id);
-        onFilesChange(newFiles);
-        // Also remove from selection if present
-        if (selectedFiles.includes(id)) {
-            setSelectedFiles(selectedFiles.filter(fid => fid !== id));
-        }
-    };
-
-    const clearAllFiles = () => {
-        setSelectedFiles([]);
-    };
-
-    const handleAddMore = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files)
-                .filter(file => file.type === 'application/pdf');
-
-            // Trigger upload
-            onUpload(newFiles);
-
-            // We should auto-select these files when they appear in the list.
-            // Since we don't have their IDs yet (generated in parent), we rely on parent to update 'selectedFiles'.
-
-            e.target.value = '';
-        }
-    }
-
-    return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <div className="bg-white rounded-2xl shadow-xl border border-secondary-100 p-8 overflow-hidden relative">
-                {/* Background Decoration */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-50 rounded-full blur-3xl -translate-y-32 translate-x-32 pointer-events-none" />
-
-                <div className="flex items-center justify-between mb-8 relative z-10">
-                    <div>
-                        <h2 className="text-2xl font-bold text-secondary-900">Select Files to Process</h2>
-                        <p className="text-secondary-500 mt-1">Choose which documents to analyze</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={onBack}
-                            className="text-secondary-500 hover:text-secondary-700 px-4 py-2 rounded-xl font-medium transition-colors hover:bg-secondary-50"
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="bg-white border border-secondary-200 hover:border-brand-300 hover:text-brand-600 text-secondary-700 px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all shadow-sm hover:shadow"
-                        >
-                            <Plus size={18} />
-                            Add More
-                        </button>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".pdf"
-                            onChange={handleAddMore}
-                            className="hidden"
-                            multiple
-                        />
-                    </div>
-                </div>
-
-                <div className="mb-6 p-4 bg-brand-50 border border-brand-200 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={selectedFiles.length === files.length && files.length > 0}
-                                onChange={selectAllFiles}
-                                className="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 w-5 h-5"
-                            />
-                            <span className="font-medium text-secondary-900">Select All Files</span>
-                        </label>
-                        <span className="text-sm text-secondary-600">
-                            ({selectedFiles.length} of {files.length} selected)
-                        </span>
-                    </div>
-                    <button
-                        onClick={clearAllFiles}
-                        className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1"
-                    >
-                        <Trash2 size={16} />
-                        Clear Selection
-                    </button>
-                </div>
-
-                <div className="space-y-3 mb-6 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
-                    {files.map((file) => (
-                        <div
-                            key={file.id}
-                            className={`p-4 border rounded-xl transition-all cursor-pointer group ${selectedFiles.includes(file.id)
-                                ? 'border-brand-500 bg-brand-50/50 shadow-sm'
-                                : 'border-secondary-100 hover:border-brand-200 hover:bg-secondary-50'
-                                }`}
-                            onClick={() => toggleFileSelection(file.id)}
-                        >
-                            <div className="flex items-center gap-4">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedFiles.includes(file.id)}
-                                    onChange={() => { }}
-                                    className="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 w-5 h-5"
-                                />
-                                <FileText size={24} className="text-brand-600" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-secondary-900">{file.file.name}</p>
-                                    <div className="flex items-center gap-2 text-sm text-secondary-600">
-                                        <span>{file.fileSize} • {formatDate(file.uploadDate)}</span>
-                                        {file.status === 'pending' && (
-                                            <span className="text-blue-600 font-medium text-xs">Pending Upload</span>
-                                        )}
-                                        {file.status === 'uploading' && (
-                                            <span className="text-brand-600 font-medium text-xs">Uploading...</span>
-                                        )}
-                                        {file.status === 'error' && (
-                                            <span className="text-red-600 font-medium text-xs">Error</span>
-                                        )}
-                                    </div>
-                                    {/* Progress bar for this file */}
-                                    {file.status === 'uploading' && (
-                                        <div className="w-full h-1 bg-secondary-100 rounded-full mt-1 overflow-hidden">
-                                            <div
-                                                className="h-full bg-brand-600 transition-all duration-300"
-                                                style={{ width: `${file.progress}%` }}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex items-center">
-                                    {(file.status === 'completed' || file.serverFileId) && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onDownload(file);
-                                            }}
-                                            className="text-secondary-400 hover:text-brand-600 p-2"
-                                            title="Download"
-                                        >
-                                            <Download size={20} />
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setExpandedFile(expandedFile === file.id ? null : file.id);
-                                        }}
-                                        className="text-secondary-400 hover:text-secondary-600 p-2"
-                                    >
-                                        {expandedFile === file.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            removeFile(file.id);
-                                        }}
-                                        className="text-secondary-400 hover:text-red-500 p-2"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {expandedFile === file.id && (
-                                <div className="mt-4 pt-4 border-t border-secondary-200">
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div>
-                                            <p className="text-secondary-500 font-medium">File Name</p>
-                                            <p className="text-secondary-900">{file.file.name}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-secondary-500 font-medium">Size</p>
-                                            <p className="text-secondary-900">{file.fileSize}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-secondary-500 font-medium">Upload Date</p>
-                                            <p className="text-secondary-900">{formatDate(file.uploadDate)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-secondary-500 font-medium">Type</p>
-                                            <p className="text-secondary-900">PDF Document</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-6 border-t border-secondary-100 relative z-10">
-                    <div className="text-sm text-secondary-500">
-                        <span className="font-bold text-secondary-900">{selectedFiles.length}</span> files
-                        selected for processing
-                    </div>
-                    <button
-                        onClick={onNext}
-                        disabled={selectedFiles.length === 0}
-                        className="bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 disabled:from-secondary-300 disabled:to-secondary-300 disabled:cursor-not-allowed text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-3 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                    >
-                        <BarChart3 size={24} />
-                        Import & Analyze Files
-                        <ArrowRight size={24} />
-                    </button>
-                </div>
-            </div>
-        </div>
+  const toggleFileSelection = (id: string) => {
+    setSelectedFiles(
+      selectedFiles.includes(id)
+        ? selectedFiles.filter((fileId) => fileId !== id)
+        : [...selectedFiles, id]
     );
+  };
+
+  const selectAllFiles = () => {
+    setSelectedFiles(selectedFiles.length === files.length ? [] : files.map((file) => file.id));
+  };
+
+  const removeFile = (id: string) => {
+    const newFiles = files.filter(f => f.id !== id);
+    onFilesChange(newFiles);
+    if (selectedFiles.includes(id)) {
+      setSelectedFiles(selectedFiles.filter(fid => fid !== id));
+    }
+  };
+
+  const clearAllFiles = () => {
+    setSelectedFiles([]);
+  };
+
+  const handleAddMore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files)
+        .filter(file =>
+          file.type === 'application/pdf' ||
+          file.type.startsWith('image/')
+        );
+      onUpload(newFiles);
+      e.target.value = '';
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-1 py-1">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <FileText size={24} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Select Files
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Choose which documents to analyze
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="px-5 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 
+                                    hover:text-blue-600 dark:hover:text-blue-400
+                                    border border-gray-200 dark:border-gray-700 rounded-lg
+                                    hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-5 py-2 text-sm font-medium
+                                    bg-white dark:bg-gray-800
+                                    text-gray-700 dark:text-gray-200
+                                    border border-gray-200 dark:border-gray-700 rounded-lg
+                                    hover:bg-gray-50 dark:hover:bg-gray-700
+                                    flex items-center gap-2 transition"
+              >
+                <Plus size={16} />
+                Add More
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,image/*"
+                onChange={handleAddMore}
+                className="hidden"
+                multiple
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Selection Bar */}
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.length === files.length && files.length > 0}
+                  onChange={selectAllFiles}
+                  className="rounded border-gray-300 dark:border-gray-600 
+                                        text-blue-600 focus:ring-blue-500 
+                                        w-4 h-4 transition"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Select All
+                </span>
+              </label>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {selectedFiles.length} of {files.length} selected
+              </span>
+            </div>
+            {selectedFiles.length > 0 && (
+              <button
+                onClick={clearAllFiles}
+                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 
+                                    flex items-center gap-1.5 transition"
+              >
+                <Trash2 size={14} />
+                Clear Selection
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Files List */}
+        <div className="p-6">
+          {files.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 
+                                flex items-center justify-center mb-4">
+                <FileText size={24} className="text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                No files uploaded
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Add files to get started with analysis
+              </p>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-6 py-2.5 text-sm font-medium
+                                    bg-blue-600 hover:bg-blue-700
+                                    text-white rounded-lg
+                                    flex items-center gap-2 transition"
+              >
+                <Plus size={16} />
+                Upload Files
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className={`border rounded-lg transition-all cursor-pointer
+                                        ${selectedFiles.includes(file.id)
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                >
+                  {/* File Row */}
+                  <div
+                    className="flex items-center gap-3 p-3"
+                    onClick={() => toggleFileSelection(file.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedFiles.includes(file.id)}
+                      onChange={() => { }}
+                      className="rounded border-gray-300 dark:border-gray-600 
+                                                text-blue-600 focus:ring-blue-500 
+                                                w-4 h-4 transition"
+                    />
+
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center
+                                            ${selectedFiles.includes(file.id)
+                        ? 'bg-blue-100 dark:bg-blue-900/30'
+                        : 'bg-gray-100 dark:bg-gray-800'
+                      }`}>
+                      <FileText size={18} className={
+                        selectedFiles.includes(file.id)
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-500 dark:text-gray-400'
+                      } />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {file.name || file.file?.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {file.fileSize}
+                        </span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatDate(file.uploadDate)}
+                        </span>
+                        {file.status === 'uploading' && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 animate-pulse">
+                            Uploading...
+                          </span>
+                        )}
+                        {file.status === 'error' && (
+                          <span className="text-xs text-red-600 dark:text-red-400">
+                            Error
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {(file.status === 'completed' || file.serverFileId) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDownload(file);
+                          }}
+                          className="p-1.5 rounded-lg text-gray-400 
+                                                        hover:text-blue-600 dark:hover:text-blue-400
+                                                        hover:bg-white dark:hover:bg-gray-700 transition"
+                        >
+                          <Download size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedFile(expandedFile === file.id ? null : file.id);
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 
+                                                    hover:text-gray-600 dark:hover:text-gray-300
+                                                    hover:bg-white dark:hover:bg-gray-700 transition"
+                      >
+                        {expandedFile === file.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(file.id);
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 
+                                                    hover:text-red-600 dark:hover:text-red-400
+                                                    hover:bg-white dark:hover:bg-gray-700 transition"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded Details */}
+                  {expandedFile === file.id && (
+                    <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-800">
+                      <div className="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400 mb-1">File Name</p>
+                          <p className="text-gray-900 dark:text-white font-medium">
+                            {file.name || file.file?.name}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400 mb-1">Size</p>
+                          <p className="text-gray-900 dark:text-white font-medium">
+                            {file.fileSize}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {files.length > 0 && (
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 
+                        bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {selectedFiles.length}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400 ml-1">
+                  files selected for analysis
+                </span>
+              </div>
+              <button
+                onClick={onNext}
+                disabled={selectedFiles.length === 0}
+                className="px-6 py-2.5 text-sm font-medium
+                                    bg-gradient-to-r from-blue-600 to-blue-700
+                                    hover:from-blue-700 hover:to-blue-800
+                                    disabled:from-gray-300 disabled:to-gray-300
+                                    disabled:text-gray-500 disabled:cursor-not-allowed
+                                    text-white rounded-lg
+                                    flex items-center gap-2
+                                    shadow-md hover:shadow-lg
+                                    transition-all duration-200"
+              >
+                <BarChart3 size={16} />
+                Analyze Selected
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

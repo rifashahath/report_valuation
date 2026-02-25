@@ -28,8 +28,6 @@ class Config:
     # JWT
     JWT_SECRET_KEY = os.getenv("JWT_SECRET")
     JWT_ALGORITHM = "HS256"
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET")
-    JWT_ALGORITHM = "HS256"
     JWT_EXPIRE_MINUTES = 480  # 8 hours – prevents token expiry during long processing jobs
     
     # Uploads

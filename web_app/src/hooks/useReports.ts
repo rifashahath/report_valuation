@@ -81,22 +81,9 @@ export function useUpdateReport() {
       data: UpdateReportRequest;
     }) => reportsApi.updateReport(reportId, data),
 
-    onSuccess: (updatedReport: Partial<ApiReport>) => {
-      // Update single report cache with proper merging
-      queryClient.setQueryData(
-        REPORT_KEY(updatedReport.id!),
-        (oldData: { success: boolean; report: ApiReport; files: any[] } | undefined) => {
-          if (!oldData) return undefined;
-
-          return {
-            ...oldData,
-            report: {
-              ...oldData.report,
-              ...updatedReport,
-            },
-          };
-        }
-      );
+    onSuccess: (updatedReport: ApiReport) => {
+      // Update single report cache
+      queryClient.setQueryData(REPORT_KEY(updatedReport?.id), updatedReport);
 
       // Invalidate reports list
       queryClient.invalidateQueries({ queryKey: REPORTS_KEY });

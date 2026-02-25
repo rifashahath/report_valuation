@@ -244,6 +244,10 @@ class AIExtractedContentRepository:
             if doc:
                 doc["id"] = str(doc["_id"])
                 doc["report_id"] = str(doc["report_id"])
+                if "created_by" in doc:
+                    doc["created_by"] = str(doc["created_by"])
+                if "original_file_id" in doc:
+                    doc["original_file_id"] = str(doc["original_file_id"])
                 del doc["_id"]
             return doc
         except:

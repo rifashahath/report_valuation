@@ -4,9 +4,17 @@ import { apiClient } from '../services/apiClient';
    Types
 ========================= */
 
+export interface ApiReportFile {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size_mb: number;
+  created_at: string;
+}
+
 export interface ApiReport {
   id: string;
-  report_name: string;
+  name: string;
   customer_name: string;
   bank_name: string;
   property_type: string;
@@ -14,6 +22,7 @@ export interface ApiReport {
   status: 'draft' | 'review' | 'approved';
   created_at: string;
   updated_at: string;
+  files: ApiReportFile[];
 }
 
 export interface GetReportsResponse {
@@ -34,25 +43,13 @@ export interface UpdateReportRequest {
    API
 ========================= */
 
-export interface GetReportByIdResponse {
-  success: boolean;
-  report: ApiReport;
-  files: any[];
-}
-
-export interface CreateReportResponse {
-  id: string;
-  report_name: string;
-  created_at: string;
-}
-
 export const reportsApi = {
   /**
    * Get all reports
    * GET /api/v1/reports
    */
   createReport: (name: string, bank_name: string) =>
-    apiClient.post<CreateReportResponse>('/api/v1/reports', { report_name: name, bank_name }),
+    apiClient.post<GetReportsResponse>('/api/v1/reports', { report_name: name, bank_name }),
 
   /**
    * Get all reports
@@ -70,14 +67,12 @@ export const reportsApi = {
       `/api/v1/reports/check?report_name=${encodeURIComponent(name)}`
     ),
 
-
-
   /**
    * Get report by ID
    * GET /api/v1/reports/{report_id}
    */
   getReportById: (reportId: string) =>
-    apiClient.get<GetReportByIdResponse>(`/api/v1/reports/${reportId}`),
+    apiClient.get<ApiReport>(`/api/v1/reports/${reportId}`),
 
   /**
    * Update report
@@ -94,40 +89,13 @@ export const reportsApi = {
     apiClient.delete<void>(`/api/v1/reports/${reportId}`),
 
   /**
-   * Import files to a report — dispatches Celery tasks and returns immediately
+   * Import files to a report
    * POST /api/v1/reports/{report_id}/import
    */
   importFiles: (reportId: string) =>
-    apiClient.post<{
-      success: boolean;
-      report_id: string;
-      job_ids: string[];
-      queued_jobs: { file_id: string; job_id: string; file_name: string; status_url: string }[];
-      skipped_files: { file_id: string; reason: string }[];
-      message: string;
-    }>(
+    apiClient.post<{ success: boolean }>(
       `/api/v1/reports/${reportId}/import`
     ),
-
-  /**
-   * Poll a single async job status
-   * GET /api/v1/jobs/{job_id}
-   */
-  pollJobStatus: (jobId: string) =>
-    apiClient.get<{
-      job_id: string;
-      celery: { state: string; ready: boolean; succeeded: boolean; failed: boolean; error?: string };
-      details: {
-        processing_status: string;
-        current_page: number | null;
-        total_pages: number | null;
-        output_pdf_path: string | null;
-        error_message: string | null;
-        completed_at: string | null;
-        summary: string | null;
-      } | null;
-      download_url?: string;
-    }>(`/api/v1/jobs/${jobId}`),
 
   /**
    * Analyze report
@@ -154,43 +122,40 @@ export const reportsApi = {
     apiClient.downloadBlob(`/api/v1/files/${fileId}`),
 
   /**
-   * Delete original file
-   * DELETE /api/v1/files/{file_id}
+   * Get report status
+   * GET /api/v1/reports/{report_id}/status
    */
-  deleteFile: (fileId: string) =>
-    apiClient.delete<void>(`/api/v1/files/${fileId}`),
+  getReportStatus: (reportId: string) =>
+    apiClient.get<{
+      report_id: string;
+      status: 'empty' | 'processing' | 'completed' | 'failed';
+      progress: {
+        completed: number;
+        total: number;
+        percentage: number;
+      };
+      files: { id: string; name: string; status: string; error?: string }[];
+      has_analysis: boolean;
+      updated_at: string;
+    }>(`/api/v1/reports/${reportId}/status`),
 
   /**
    * Upload files to a report
-   * POST /api/v1/reports/{report_id}/files
+   * POST /api/v1/documents/process-multiple
    */
   uploadFiles: (reportId: string, files: File[]) => {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append('files', file);
     });
-    return apiClient.post<{ success: boolean; files: any[] }>(
-      `/api/v1/reports/${reportId}/files`,
+    formData.append('client_name', 'Client'); // Default client name required by backend
+    formData.append('report_id', reportId);
+
+    return apiClient.post<{ success: boolean; documents: any[] }>(
+      `/api/v1/documents/process-multiple`,
       formData
     );
   },
-  /**
-   * Get full extracted/translated content for all files in a report
-   * GET /api/v1/reports/{report_id}/files/content
-   */
-  getFileContents: (reportId: string) =>
-    apiClient.get<{ report_id: string; files: { file_id: string; file_name: string; content: string }[] }>(
-      `/api/v1/reports/${reportId}/files/content`
-    ),
-
-  /**
-   * Get stored LLM analysis for a report
-   * GET /api/v1/reports/{report_id}/analysis
-   */
-  getReportAnalysis: (reportId: string) =>
-    apiClient.get<{ report_id: string; report_name: string; analysis: string | null }>(
-      `/api/v1/reports/${reportId}/analysis`
-    ),
 };
 
 export default reportsApi;
