@@ -14,12 +14,14 @@ export interface ApiReportFile {
 
 export interface ApiReport {
   id: string;
-  name: string;
-  customer_name: string;
+  report_name: string;      // actual backend field
+  name?: string;            // alias fallback
+  customer_name?: string;   // not used by backend currently
   bank_name: string;
-  property_type: string;
-  location: string;
-  status: 'draft' | 'review' | 'approved';
+  property_type?: string;
+  location?: string;
+  report_status?: string;   // actual backend field (e.g. "initialising", "completed")
+  status?: 'draft' | 'review' | 'approved'; // alias fallback
   created_at: string;
   updated_at: string;
   files: ApiReportFile[];
@@ -98,13 +100,22 @@ export const reportsApi = {
     ),
 
   /**
-   * Analyze report
+   * Analyze report (triggers new AI analysis — expensive)
    * POST /api/v1/reports/analysis
    */
   analyzeReport: (reportId: string) =>
-    apiClient.post<{ id: string; analysis: string }>(
+    apiClient.post<{ id: string; report_name: string; analysis: string }>(
       '/api/v1/reports/analysis',
       { report_id: reportId }
+    ),
+
+  /**
+   * Get existing stored analysis for a report (cheap — no AI call)
+   * GET /api/v1/reports/{report_id}/analysis
+   */
+  getReportAnalysis: (reportId: string) =>
+    apiClient.get<{ report_id: string; report_name: string; analysis: string | null }>(
+      `/api/v1/reports/${reportId}/analysis`
     ),
 
   /**

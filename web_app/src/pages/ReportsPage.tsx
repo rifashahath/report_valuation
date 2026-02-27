@@ -1,49 +1,52 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { useReports } from '../hooks/useReports';
 import FileManagement from '../components/report/FileManagement';
 import { ApiReport } from '../apis/report.api';
 import { FileNode, ValuationReport, ReportStatus, PropertyType } from '../types';
 
 export default function ReportsPage() {
-    const { user } = useAuth();
-    const navigate = useNavigate();
     const { data: reportsData } = useReports();
 
     const valuationReports: ValuationReport[] = useMemo(() => {
         if (!reportsData?.reports) return [];
-        return reportsData.reports.map((r: ApiReport) => ({
-            id: r.id,
-            customerName: r.customer_name || 'Unknown',
-            bankName: r.bank_name || 'Unknown',
-            propertyType: (r.property_type as PropertyType) || 'Residential',
-            location: r.location || 'Unknown',
-            status: (r.status as ReportStatus) || 'draft',
-            createdAt: new Date(r.created_at),
-            updatedAt: new Date(r.updated_at),
-            year: new Date(r.created_at).getFullYear().toString(),
-            month: new Date(r.created_at).toLocaleString('default', { month: 'long' }),
-            files: r.files ? r.files.map((f: any) => ({
-                id: f.id,
-                name: f.file_name,
-                type: 'original',
-                size: `${f.file_size_mb.toFixed(2)} MB`,
-                uploadedAt: new Date(f.created_at),
-                url: `http://localhost:8000/api/v1/files/${f.id}`
-            })) : [],
-            metadata: {
-                year: { value: '', aiConfidence: 'low', needsReview: false },
-                bankName: { value: r.bank_name || '', aiConfidence: 'low', needsReview: false },
-                month: { value: '', aiConfidence: 'low', needsReview: false },
-                customerName: { value: r.customer_name || '', aiConfidence: 'low', needsReview: false },
-                propertyType: { value: r.property_type || '', aiConfidence: 'low', needsReview: false },
-                location: { value: r.location || '', aiConfidence: 'low', needsReview: false }
-            },
-            content: { summary: '', propertyDetails: '', valuationMethod: '', finalValuation: '' },
-            comments: [],
-            auditTrail: []
-        }));
+        return reportsData.reports.map((r: ApiReport) => {
+            // Backend returns `report_name` and `report_status` — not `name`/`customer_name`/`status`
+            const reportName = r.report_name || r.name || `Report ${r.id.substring(0, 6)}`;
+            const bankName = r.bank_name || 'Uncategorized';
+            const reportStatus = (r.report_status || r.status || 'draft').toLowerCase() as ReportStatus;
+
+            return {
+                id: r.id,
+                customerName: reportName,
+                bankName,
+                propertyType: (r.property_type as PropertyType) || 'Residential',
+                location: r.location || '',
+                status: reportStatus,
+                createdAt: new Date(r.created_at),
+                updatedAt: new Date(r.updated_at),
+                year: new Date(r.created_at).getFullYear().toString(),
+                month: new Date(r.created_at).toLocaleString('default', { month: 'long' }),
+                files: r.files ? r.files.map((f: any) => ({
+                    id: f.id,
+                    name: f.file_name || f.name || `File ${f.id?.substring(0, 6) || '?'}`,
+                    type: 'original' as const,
+                    size: `${(f.file_size_mb || 0).toFixed(2)} MB`,
+                    uploadedAt: new Date(f.created_at),
+                    url: `http://localhost:8000/api/v1/files/${f.id}`
+                })) : [],
+                metadata: {
+                    year: { value: '', aiConfidence: 'low' as const, needsReview: false },
+                    bankName: { value: bankName, aiConfidence: 'low' as const, needsReview: false },
+                    month: { value: '', aiConfidence: 'low' as const, needsReview: false },
+                    customerName: { value: reportName, aiConfidence: 'low' as const, needsReview: false },
+                    propertyType: { value: r.property_type || '', aiConfidence: 'low' as const, needsReview: false },
+                    location: { value: r.location || '', aiConfidence: 'low' as const, needsReview: false }
+                },
+                content: { summary: '', propertyDetails: '', valuationMethod: '', finalValuation: '' },
+                comments: [],
+                auditTrail: []
+            };
+        });
     }, [reportsData]);
 
     const fileTree: FileNode[] = useMemo(() => {
@@ -65,12 +68,12 @@ export default function ReportsPage() {
 
             structure[year][bankName].push({
                 id: report.id,
-                name: report.customerName || `Report ${report.id.substring(0, 6)}`,
+                name: report.customerName,
                 type: 'folder', // Report acts as a folder
                 reportId: report.id,
                 children: report.files.map(f => ({
                     id: f.id,
-                    name: f.name,
+                    name: f.name || `File ${f.id.substring(0, 6)}`,
                     type: 'file',
                     reportId: report.id,
                     fileType: f.type
@@ -79,7 +82,7 @@ export default function ReportsPage() {
         });
 
         // Convert to FileNode array (Years at top level)
-        return Object.keys(structure).sort((a, b) => b.localeCompare(a)).map((year, yIndex) => {
+        return Object.keys(structure).sort((a, b) => b.localeCompare(a)).map((year) => {
             const banksObj = structure[year];
             const banks = Object.keys(banksObj).sort();
 
@@ -104,13 +107,6 @@ export default function ReportsPage() {
         <FileManagement
             fileTree={fileTree}
             reports={valuationReports}
-            onNavigate={(page, id) => {
-                if (id) {
-                    navigate(`/reports/${id}/${page}`);
-                } else {
-                    navigate(`/${page}`);
-                }
-            }}
         />
     );
 }

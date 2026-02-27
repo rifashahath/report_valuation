@@ -68,11 +68,11 @@ export default function Upload() {
 
   const initializeFromExistingReport = async (report: typeof reportData) => {
     setReportId(report.id);
-    setProjectName(report.name);
+    setProjectName(report.report_name || report.name || '');
     setBankName(report.bank_name || '');
 
     try {
-      const analysisResponse = await reportsApi.analyzeReport(report.id);
+      const analysisResponse = await reportsApi.getReportAnalysis(report.id);
 
       if (analysisResponse?.analysis) {
         setAnalysisResult(analysisResponse.analysis);
