@@ -21,6 +21,8 @@ interface ReactSelectFieldProps {
   isClearable?: boolean;
   isDisabled?: boolean;
   className?: string;
+  /** Left padding for the value container — use when an icon is overlaid on the left */
+  iconPadding?: string | number;
 }
 
 export const ReactSelectField: React.FC<ReactSelectFieldProps> = ({
@@ -33,6 +35,7 @@ export const ReactSelectField: React.FC<ReactSelectFieldProps> = ({
   isClearable = true,
   isDisabled = false,
   className,
+  iconPadding,
 }) => {
   const handleChange = (
     selected: MultiValue<Option> | SingleValue<Option>
@@ -59,6 +62,10 @@ export const ReactSelectField: React.FC<ReactSelectFieldProps> = ({
         '&:hover': {
           borderColor: '#3b82f6',
         },
+      }),
+      valueContainer: (base) => ({
+        ...base,
+        ...(iconPadding !== undefined ? { paddingLeft: iconPadding } : {}),
       }),
       menu: (base) => ({
         ...base,

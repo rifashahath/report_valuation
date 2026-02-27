@@ -182,19 +182,24 @@ class APIService {
    * Download the generated PDF
    */
   async downloadPdf(combinationId: string): Promise<Blob> {
-    try {
-      const response = await fetch(config.apiEndpoints.downloadPdf(combinationId));
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("token") ||
+      "";
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
+    const url = config.apiEndpoints.downloadPdf(combinationId);
 
-      return await response.blob();
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      throw error;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`Download failed (${response.status}): ${text}`);
     }
+
+    return await response.blob();
   }
 
   /**

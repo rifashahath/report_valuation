@@ -135,6 +135,7 @@ export default function ProjectNameStep({
               onChange={handleBankChange}
               placeholder="Select or type bank name..."
               isClearable
+              iconPadding="40px"
             />
           </div>
         </div>

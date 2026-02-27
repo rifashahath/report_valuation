@@ -13,28 +13,23 @@ export default function ReportDetailView({ reportId }: ReportDetailViewProps) {
     const [loadingAnalysis, setLoadingAnalysis] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    // Fetch analysis when report is selected
+    // Fetch stored analysis when report is selected (GET — does NOT re-run AI)
     useEffect(() => {
-        if (reportId && reportData) {
-            const fetchAnalysis = async () => {
-                setLoadingAnalysis(true);
-                try {
-                    const analysisResponse = await reportsApi.analyzeReport(reportId);
-                    if (analysisResponse && analysisResponse.analysis) {
-                        setAnalysisResult(analysisResponse.analysis);
-                    } else {
-                        setAnalysisResult(null);
-                    }
-                } catch (error) {
-                    console.log('No analysis found for this report');
-                    setAnalysisResult(null);
-                } finally {
-                    setLoadingAnalysis(false);
-                }
-            };
-            fetchAnalysis();
-        }
-    }, [reportId, reportData]);
+        if (!reportId) return;
+        const fetchAnalysis = async () => {
+            setLoadingAnalysis(true);
+            try {
+                const analysisResponse = await reportsApi.getReportAnalysis(reportId);
+                setAnalysisResult(analysisResponse?.analysis ?? null);
+            } catch (error) {
+                console.log('No analysis found for this report');
+                setAnalysisResult(null);
+            } finally {
+                setLoadingAnalysis(false);
+            }
+        };
+        fetchAnalysis();
+    }, [reportId]);
 
     const handleCopy = () => {
         if (analysisResult) {
@@ -153,7 +148,7 @@ export default function ReportDetailView({ reportId }: ReportDetailViewProps) {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                                {reportData.name}
+                                {reportData.report_name || reportData.name}
                             </h1>
                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${reportData.status === 'approved'
                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
@@ -230,7 +225,7 @@ export default function ReportDetailView({ reportId }: ReportDetailViewProps) {
                 {/* Quick Info Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: 'Customer', value: reportData.customer_name, icon: <FileText size={14} /> },
+                        { label: 'Customer', value: reportData.report_name || reportData.customer_name, icon: <FileText size={14} /> },
                         { label: 'Bank', value: reportData.bank_name, icon: <Building2 size={14} /> },
                         { label: 'Property', value: reportData.property_type, icon: <Building2 size={14} /> },
                         { label: 'Location', value: reportData.location, icon: <MapPin size={14} /> },

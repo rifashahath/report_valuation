@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Filter } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Filter, CheckCircle2, AlertCircle } from 'lucide-react';
 import { FileNode, ValuationReport, ReportFile } from '../../types';
 import FileSidebar from './file-manager/FileSidebar';
 import FileList from './file-manager/FileList';
@@ -12,13 +12,22 @@ interface FileManagementProps {
     reports: ValuationReport[];
     onDownload?: (file: ReportFile) => void;
     onDelete?: (file: ReportFile) => Promise<void>;
+    /** Optional: called when a file is moved to a new folder (backend sync) */
+    onMoveFile?: (fileId: string, targetNode: FileNode) => Promise<void>;
+}
+
+interface Toast {
+    id: number;
+    type: 'success' | 'error';
+    message: string;
 }
 
 export default function FileManagement({
-    fileTree,
+    fileTree: propFileTree,
     reports,
     onDownload,
     onDelete,
+    onMoveFile,
 }: FileManagementProps) {
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [selectedNode, setSelectedNode] = useState<FileNode | null>(null);
@@ -27,6 +36,26 @@ export default function FileManagement({
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [deleteItem, setDeleteItem] = useState<ReportFile | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [draggedFile, setDraggedFile] = useState<ReportFile | null>(null);
+    const [toasts, setToasts] = useState<Toast[]>([]);
+
+    // Local file tree state so we can mutate it on drag & drop without a full refetch
+    const [localFileTree, setLocalFileTree] = useState<FileNode[]>(propFileTree);
+
+    // Keep local tree in sync when prop changes (e.g. after data refetch)
+    const [prevPropFileTree, setPrevPropFileTree] = useState<FileNode[]>(propFileTree);
+    if (propFileTree !== prevPropFileTree) {
+        setPrevPropFileTree(propFileTree);
+        setLocalFileTree(propFileTree);
+    }
+
+    // --- Toast helpers ---
+
+    const showToast = (type: 'success' | 'error', message: string) => {
+        const id = Date.now();
+        setToasts((prev) => [...prev, { id, type, message }]);
+        setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    };
 
     // --- Actions ---
 
@@ -75,6 +104,79 @@ export default function FileManagement({
         }
     };
 
+    /** Recursively move a file node from one folder to another inside the tree */
+    const moveFileInTree = useCallback(
+        (tree: FileNode[], fileId: string, targetFolderId: string): { tree: FileNode[]; movedNode: FileNode | null } => {
+            let movedNode: FileNode | null = null;
+
+            const removeFile = (nodes: FileNode[]): FileNode[] => {
+                return nodes.reduce<FileNode[]>((acc, node) => {
+                    if (node.type === 'file' && node.id === fileId) {
+                        movedNode = node;
+                        // skip — removing from source
+                        return acc;
+                    }
+                    if (node.children) {
+                        return [...acc, { ...node, children: removeFile(node.children) }];
+                    }
+                    return [...acc, node];
+                }, []);
+            };
+
+            const addFile = (nodes: FileNode[], fileNode: FileNode): FileNode[] => {
+                return nodes.map((node) => {
+                    if (node.id === targetFolderId && node.type === 'folder') {
+                        return {
+                            ...node,
+                            children: [...(node.children || []), fileNode]
+                        };
+                    }
+                    if (node.children) {
+                        return { ...node, children: addFile(node.children, fileNode) };
+                    }
+                    return node;
+                });
+            };
+
+            const treeWithoutFile = removeFile(tree);
+            if (!movedNode) return { tree, movedNode: null };
+
+            const finalTree = addFile(treeWithoutFile, movedNode);
+            return { tree: finalTree, movedNode };
+        },
+        []
+    );
+
+    const handleDropFile = useCallback(
+        async (fileId: string, targetFolderNode: FileNode) => {
+            // Don't allow dropping onto the same folder
+            const currentFolderHasFile = selectedNode?.children?.some((c) => c.id === fileId);
+            if (selectedNode?.id === targetFolderNode.id && currentFolderHasFile) return;
+
+            // Optimistic UI update
+            const { tree: updatedTree, movedNode } = moveFileInTree(localFileTree, fileId, targetFolderNode.id);
+            if (!movedNode) {
+                showToast('error', 'Could not move file — file not found in tree.');
+                return;
+            }
+
+            setLocalFileTree(updatedTree);
+            showToast('success', `"${movedNode.name}" moved to "${targetFolderNode.name}"`);
+
+            // Sync to backend if handler provided
+            if (onMoveFile) {
+                try {
+                    await onMoveFile(fileId, targetFolderNode);
+                } catch (err) {
+                    // Rollback on failure
+                    setLocalFileTree(localFileTree);
+                    showToast('error', `Failed to move "${movedNode.name}". Changes reverted.`);
+                }
+            }
+        },
+        [localFileTree, moveFileInTree, onMoveFile, selectedNode]
+    );
+
     const getSelectedFiles = () => {
         if (!selectedNode) return [];
 
@@ -117,25 +219,29 @@ export default function FileManagement({
 
     const selectedFiles = getSelectedFiles();
 
-    // TODO: Re-implement drag & drop and upload logic in the future or move to a separate component
-
     return (
         <div className="h-screen flex flex-col">
             <div className="p-8 border-b border-gray-200 bg-white">
                 <h1 className="text-3xl font-bold text-gray-900">File Management</h1>
                 <p className="text-gray-600 mt-2">Browse and manage valuation reports</p>
+                {draggedFile && (
+                    <p className="text-xs text-blue-500 mt-1 animate-pulse">
+                        📂 Dragging <strong>"{draggedFile.name}"</strong> — drop onto a folder in the sidebar to move it
+                    </p>
+                )}
             </div>
 
             <div className="flex-1 flex overflow-hidden">
                 {/* Sidebar */}
                 <FileSidebar
-                    fileTree={fileTree}
+                    fileTree={localFileTree}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                     expandedNodes={expandedNodes}
                     onToggleNode={toggleNode}
                     selectedNode={selectedNode}
                     onSelectNode={setSelectedNode}
+                    onDropFile={handleDropFile}
                 />
 
                 {/* Main Content */}
@@ -169,6 +275,7 @@ export default function FileManagement({
                             onPreview={handlePreview}
                             onDownload={handleDownload}
                             onDelete={onDelete ? (file) => setDeleteItem(file) : undefined}
+                            onDragStart={setDraggedFile}
                         />
                     </div>
                 </div>
@@ -193,6 +300,29 @@ export default function FileManagement({
                     isDeleting={isDeleting}
                 />
             )}
+
+            {/* Toast Notifications */}
+            <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50 pointer-events-none">
+                {toasts.map((toast) => (
+                    <div
+                        key={toast.id}
+                        className={`
+                            flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg pointer-events-auto
+                            text-sm font-medium transition-all duration-300 animate-slide-up
+                            ${toast.type === 'success'
+                                ? 'bg-green-50 border border-green-200 text-green-800'
+                                : 'bg-red-50 border border-red-200 text-red-800'
+                            }
+                        `}
+                    >
+                        {toast.type === 'success'
+                            ? <CheckCircle2 size={18} className="text-green-500 flex-shrink-0" />
+                            : <AlertCircle size={18} className="text-red-500 flex-shrink-0" />
+                        }
+                        {toast.message}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
