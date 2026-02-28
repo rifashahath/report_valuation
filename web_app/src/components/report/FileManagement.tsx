@@ -220,8 +220,8 @@ export default function FileManagement({
     const selectedFiles = getSelectedFiles();
 
     return (
-        <div className="h-full flex flex-col p-4 md:p-6">
-            <div className="flex-1 flex flex-col bg-white dark:bg-night-900 rounded-2xl shadow-lg shadow-brand-200/30 dark:shadow-slate-900/30 overflow-hidden">
+        <div className="h-full flex flex-col">
+            <div className="flex-1 flex flex-col bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 shadow-lg dark:shadow-none overflow-hidden">
                 <div className="p-6 border-b border-slate-100 dark:border-night-700 bg-white dark:bg-night-900">
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white">File Management</h1>
                     <p className="text-slate-500 dark:text-slate-300 mt-2">Browse and manage valuation reports</p>

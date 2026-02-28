@@ -50,14 +50,14 @@ export default {
           500: '#f43f5e',
           700: '#be123c',
         },
-        // Pleasant deep-navy dark theme palette
+        // Pleasant deep slate-navy dark theme palette
         night: {
-          950: '#080F1A',   // main page background
-          900: '#0D1626',   // card / sidebar surface
-          800: '#162236',   // input / button bg
-          700: '#1F3048',   // subtle borders
-          600: '#28405E',   // visible / hover borders
-          500: '#334E72',   // muted text bg accents
+          950: '#0b1120',   // main page background (softer deep navy)
+          900: '#111827',   // card / sidebar surface (slate-900)
+          800: '#1f2937',   // input / button bg (slate-800)
+          700: '#374151',   // subtle borders (slate-700)
+          600: '#4b5563',   // visible / hover borders (slate-600)
+          500: '#6b7280',   // muted text bg accents (slate-500)
         },
       },
       fontFamily: {
@@ -105,8 +105,8 @@ export default {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'dot-pattern': 'radial-gradient(circle, #e2e8f0 1px, transparent 1px)',
-        'dot-pattern-dark': 'radial-gradient(circle, #1e293b 1px, transparent 1px)',
+        'dot-pattern': 'radial-gradient(circle, #94a3b8 1px, transparent 1px)',
+        'dot-pattern-dark': 'radial-gradient(circle, #334155 1.5px, transparent 1.5px)',
       },
       backgroundSize: {
         'dot-sm': '16px 16px',

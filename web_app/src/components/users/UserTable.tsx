@@ -21,7 +21,7 @@ export const UserTable: React.FC<UserTableProps> = ({
 }) => {
     if (isLoading) {
         return (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+            <div className="bg-slate-50/50 dark:bg-night-950/50 rounded-2xl border border-brand-100 dark:border-night-800 p-12 text-center">
                 <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-4"></div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">Loading users...</p>
             </div>
@@ -30,11 +30,11 @@ export const UserTable: React.FC<UserTableProps> = ({
 
     if (users.length === 0) {
         return (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
-                <div className="h-12 w-12 mx-auto bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                    <Users className="h-6 w-6 text-slate-400" />
+            <div className="bg-slate-50/50 dark:bg-night-950/50 rounded-2xl border border-brand-100 dark:border-night-800 p-12 text-center flex flex-col items-center">
+                <div className="h-16 w-16 bg-white dark:bg-night-800 rounded-2xl shadow-sm border border-brand-100 dark:border-night-700 flex items-center justify-center mb-6">
+                    <Users className="h-8 w-8 text-brand-400 dark:text-brand-500" />
                 </div>
-                <h3 className="text-base font-medium text-slate-900 dark:text-white mb-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
                     {searchTerm ? 'No matching users found' : 'No users yet'}
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 max-w-sm mx-auto">
@@ -43,7 +43,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                 {!searchTerm && (
                     <button
                         onClick={onAddClick}
-                        className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-brand-700 to-brand-900 hover:from-brand-800 hover:to-brand-950 dark:from-brand-600 dark:to-brand-800 text-white px-6 py-2.5 rounded-xl text-base font-bold shadow-lg shadow-brand-300/40 dark:shadow-brand-900/20 transition-all hover:-translate-y-0.5 mt-2"
                     >
                         <Plus size={16} />
                         Add First User
@@ -54,7 +54,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     }
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>

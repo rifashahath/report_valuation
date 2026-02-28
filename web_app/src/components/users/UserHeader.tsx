@@ -19,8 +19,8 @@ export const UserHeader: React.FC<UserHeaderProps> = ({
                 <p className="text-slate-500 dark:text-slate-400">Manage your team members and their permissions.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="group bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 p-6 shadow-lg hover:shadow-xl hover:shadow-brand-200/40 dark:shadow-none dark:hover:shadow-brand-900/10 transition-all duration-500 relative overflow-hidden flex items-center justify-between isolate">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Users</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">{totalUsers}</p>
@@ -30,7 +30,7 @@ export const UserHeader: React.FC<UserHeaderProps> = ({
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm">
+                <div className="group bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 p-6 shadow-lg hover:shadow-xl hover:shadow-brand-200/40 dark:shadow-none dark:hover:shadow-brand-900/10 transition-all duration-500 relative overflow-hidden flex items-center justify-between isolate">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Active Roles</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">{rolesCount}</p>
@@ -40,7 +40,7 @@ export const UserHeader: React.FC<UserHeaderProps> = ({
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm">
+                <div className="group bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 p-6 shadow-lg hover:shadow-xl hover:shadow-brand-200/40 dark:shadow-none dark:hover:shadow-brand-900/10 transition-all duration-500 relative overflow-hidden flex items-center justify-between isolate">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Administrators</p>
                         <p className="text-3xl font-bold text-slate-900 dark:text-white">{adminsCount}</p>

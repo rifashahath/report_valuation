@@ -299,8 +299,8 @@ export default function Upload() {
   // ==================== RENDER ====================
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
-      <div className="bg-white dark:bg-night-900 rounded-2xl shadow-lg shadow-brand-200/30 dark:shadow-slate-900/30 overflow-hidden">
+    <div className="h-full">
+      <div className="bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 shadow-lg dark:shadow-none overflow-hidden">
         {/* Header */}
         <header className="sticky top-0 z-40 bg-white dark:bg-night-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-night-700">
           <div className="w-full mx-auto px-2 sm:px-3 lg:px-4 py-3">
@@ -373,7 +373,7 @@ export default function Upload() {
                   setProjectName={setProjectName}
                   bankName={bankName}
                   setBankName={setBankName}
-                  onNext={handleCreateReport}
+                  onNext={handleCreateReport}  
                   recentProjects={recentProjects}
                 />
               )}

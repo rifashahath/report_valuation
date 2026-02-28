@@ -134,8 +134,8 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6 animate-in fade-in duration-500">
-      <div className="max-w-[1600px] mx-auto space-y-6 bg-white dark:bg-night-900 rounded-2xl shadow-lg shadow-brand-200/30 dark:shadow-slate-900/30 p-6 md:p-8">
+    <div className="h-full animate-in fade-in duration-500">
+      <div className="max-w-[1600px] mx-auto space-y-6 bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 shadow-lg dark:shadow-none p-6 md:p-8">
         <UserHeader
           totalUsers={stats.total}
           rolesCount={stats.rolesCount}

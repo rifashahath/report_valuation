@@ -5,7 +5,6 @@ import {
     CheckCircle,
     AlertCircle,
     Upload,
-    FolderOpen,
     TrendingUp,
     ArrowRight,
     Search,
@@ -68,40 +67,44 @@ export default function DashboardPage() {
             label: 'Total Reports',
             value: stats.totalReports,
             icon: <FileText size={20} />,
-            color: 'text-brand-600',
-            bg: 'bg-brand-100',
-            border: 'border-brand-200',
-            circleBg: 'bg-brand-300',
+            color: 'text-brand-600 dark:text-brand-400',
+            bg: 'bg-brand-100 dark:bg-brand-400/10',
+            border: 'border-brand-200 dark:border-brand-400/20',
+            circleBg: 'bg-brand-300 dark:bg-brand-400/10',
+            trendColor: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
             trend: '+12%'
         },
         {
             label: 'Draft',
             value: stats.draftReports,
             icon: <Clock size={20} />,
-            color: 'text-amber-500',
-            bg: 'bg-amber-100',
-            border: 'border-amber-200',
-            circleBg: 'bg-amber-300',
+            color: 'text-amber-500 dark:text-amber-400',
+            bg: 'bg-amber-100 dark:bg-amber-400/10',
+            border: 'border-amber-200 dark:border-amber-400/20',
+            circleBg: 'bg-amber-300 dark:bg-amber-400/10',
+            trendColor: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
             trend: '+5%'
         },
         {
             label: 'In Review',
             value: stats.reviewReports,
             icon: <AlertCircle size={20} />,
-            color: 'text-orange-500',
-            bg: 'bg-orange-100',
-            border: 'border-orange-200',
-            circleBg: 'bg-orange-300',
+            color: 'text-orange-500 dark:text-orange-400',
+            bg: 'bg-orange-100 dark:bg-orange-400/10',
+            border: 'border-orange-200 dark:border-orange-400/20',
+            circleBg: 'bg-orange-300 dark:bg-orange-400/10',
+            trendColor: 'bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400',
             trend: 'Pending'
         },
         {
             label: 'Approved',
             value: stats.approvedReports,
             icon: <CheckCircle size={20} />,
-            color: 'text-emerald-500',
-            bg: 'bg-emerald-100',
-            border: 'border-emerald-200',
-            circleBg: 'bg-emerald-300',
+            color: 'text-emerald-500 dark:text-emerald-400',
+            bg: 'bg-emerald-100 dark:bg-emerald-400/10',
+            border: 'border-emerald-200 dark:border-emerald-400/20',
+            circleBg: 'bg-emerald-300 dark:bg-emerald-400/10',
+            trendColor: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
             trend: 'Verified'
         },
     ];
@@ -111,7 +114,7 @@ export default function DashboardPage() {
             case 'draft': return 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30';
             case 'review': return 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-900/30';
             case 'approved': return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30';
-            default: return 'bg-slate-50 dark:bg-night-800/50 text-slate-600 dark:text-slate-300 border-slate-100 dark:border-night-700/50';
+            default: return 'bg-slate-50 dark:bg-night-800/50 text-slate-600 dark:text-slate-300 border-slate-100 dark:border-night-800/50';
         }
     };
 
@@ -137,10 +140,10 @@ export default function DashboardPage() {
                         <input
                             type="text"
                             placeholder="Search reports..."
-                            className="pl-10 pr-4 py-2.5 bg-white dark:bg-night-900 border border-brand-200 dark:border-night-700 rounded-xl text-base focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none w-80 shadow-sm transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                            className="pl-10 pr-4 py-2.5 bg-white dark:bg-night-900 border border-brand-200 dark:border-night-800 rounded-xl text-base focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 outline-none w-80 shadow-sm transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
                         />
                     </div>
-                    <button className="p-2.5 bg-white dark:bg-night-900 border border-brand-200 dark:border-night-700 rounded-xl text-brand-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-night-800 transition-all shadow-sm">
+                    <button className="p-2.5 bg-white dark:bg-night-900 border border-brand-200 dark:border-night-800 rounded-xl text-brand-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-night-800 transition-all shadow-sm">
                         <Filter size={20} />
                     </button>
                     <button
@@ -158,11 +161,11 @@ export default function DashboardPage() {
                 {statCards.map((card, index) => (
                     <div
                         key={card.label}
-                        className="group bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-700 p-6 hover:shadow-2xl hover:shadow-brand-200/40 dark:hover:shadow-brand-900/10 transition-all duration-500 relative overflow-hidden hover:border-brand-200 dark:hover:border-slate-700"
+                        className="group bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 p-6 shadow-lg hover:shadow-2xl hover:shadow-brand-200/40 dark:shadow-none dark:hover:shadow-brand-900/10 transition-all duration-500 relative overflow-hidden hover:border-brand-200 dark:hover:border-slate-700 isolate"
                         style={{ animationDelay: `${index * 100}ms` }}
                     >
                         <div className="flex items-start justify-between relative z-10">
-                            <div className={`${card.bg} dark:bg-night-800 ${card.color} ${card.border} dark:border-night-700 p-4 rounded-2xl border group-hover:scale-110 transition-transform duration-500 shadow-sm`}>
+                            <div className={`${card.bg} ${card.color} ${card.border} p-4 rounded-2xl border group-hover:scale-110 transition-transform duration-500 shadow-md dark:shadow-none`}>
                                 {React.cloneElement(card.icon as React.ReactElement, { size: 24 })}
                             </div>
                             <div className="flex flex-col items-end">
@@ -171,14 +174,14 @@ export default function DashboardPage() {
                             </div>
                         </div>
                         <div className="mt-8 flex items-center justify-between relative z-10">
-                            <div className={`text-xs font-bold px-3 py-1 rounded-full ${card.trend.includes('+') ? 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-night-800 text-slate-500 dark:text-slate-400'}`}>
+                            <div className={`text-xs font-bold px-3 py-1 rounded-full ${card.trendColor}`}>
                                 {card.trend}
                             </div>
-                            <TrendingUp size={16} className="text-slate-300 dark:text-slate-700" />
+                            <TrendingUp size={16} className={`${card.color} opacity-60`} />
                         </div>
                         {/* Decorative orb — prominent in both modes */}
-                        <div className={`absolute -right-6 -bottom-6 w-28 h-28 ${card.circleBg} dark:bg-night-800 rounded-full opacity-35 dark:opacity-100 group-hover:scale-125 transition-transform duration-700 flex items-end justify-start p-4`}>
-                            <TrendingUp size={18} className={`${card.color} dark:text-slate-400 opacity-60`} />
+                        <div className={`absolute -right-6 -bottom-6 w-28 h-28 ${card.circleBg} rounded-full opacity-35 dark:opacity-40 group-hover:scale-125 transition-transform duration-700 flex items-end justify-start p-4 -z-10`}>
+                            {/* Removed the extra TrendingUp icon from inside the orb as it was duplicating and spilling out */}
                         </div>
                     </div>
                 ))}
@@ -187,8 +190,8 @@ export default function DashboardPage() {
             {/* Main Section */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Tables / Recent Reports */}
-                <div className="lg:col-span-12 bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-700 shadow-[0_8px_30px_rgba(59,130,246,0.04)] dark:shadow-none overflow-hidden">
-                    <div className="px-8 py-6 border-b border-slate-50 dark:border-night-700 bg-slate-50/30 dark:bg-night-900/50 flex items-center justify-between">
+                <div className="lg:col-span-12 bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 shadow-md dark:shadow-none overflow-hidden">
+                    <div className="px-8 py-6 border-b border-slate-50 dark:border-night-800 bg-slate-50/30 dark:bg-night-900/50 flex items-center justify-between">
                         <div>
                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Recent Activity</h2>
                             <p className="text-sm text-slate-500 dark:text-slate-300 font-semibold mt-1">Track your latest generated reports and their status.</p>
@@ -203,7 +206,7 @@ export default function DashboardPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="bg-slate-50/50 dark:bg-night-800/50 border-b border-slate-100 dark:border-night-700">
+                                <tr className="bg-slate-50/50 dark:bg-night-800/50 border-b border-slate-100 dark:border-night-800">
                                     <th className="px-8 py-5 text-left text-xs font-bold text-slate-400 dark:text-slate-400 uppercase tracking-[0.15em] w-1/4">
                                         Customer / Report
                                     </th>
@@ -267,7 +270,7 @@ export default function DashboardPage() {
                         </table>
                     </div>
                     {/* Empty state footer or more reports hint */}
-                    <div className="px-6 py-4 bg-slate-50/20 dark:bg-night-800/10 border-t border-slate-50 dark:border-night-700 flex justify-center">
+                    <div className="px-6 py-4 bg-slate-50/20 dark:bg-night-800/10 border-t border-slate-50 dark:border-night-800 flex justify-center">
                         <button
                             onClick={() => navigate('files')}
                             className="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex items-center gap-2"
