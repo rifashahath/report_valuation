@@ -36,9 +36,8 @@ export interface CheckReportNameResponse {
 }
 
 export interface UpdateReportRequest {
-  name?: string;
-  content?: Record<string, any>;
-  status?: 'draft' | 'review' | 'approved';
+  report_name: string;
+  report_status?: string;
 }
 
 /* =========================
@@ -167,6 +166,15 @@ export const reportsApi = {
       formData
     );
   },
+  /**
+   * Save edited analysis content for a report
+   * PUT /api/v1/reports/{report_id}/analysis
+   */
+  updateReportAnalysis: (reportId: string, content: string) =>
+    apiClient.put<{ report_id: string; analysis: string }>(
+      `/api/v1/reports/${reportId}/analysis`,
+      { content }
+    ),
 };
 
 export default reportsApi;

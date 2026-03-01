@@ -3,7 +3,7 @@ Reports API routes
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
-from typing import List
+from typing import List, Optional
 from fastapi.responses import Response, FileResponse
 import logging
 from app.services.llm import LLMService
@@ -34,6 +34,7 @@ class CreateReportRequest(BaseModel):
 
 class UpdateReportRequest(BaseModel):
     report_name: str
+    report_status: Optional[str] = None
 
 class AnalysisRequest(BaseModel):
     report_id: str
@@ -343,7 +344,7 @@ async def update_report(
     payload: UpdateReportRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Update report name"""
+    """Update report name and/or status"""
 
     report = ReportRepository.get_by_id(report_id)
     if not report:
@@ -364,9 +365,15 @@ async def update_report(
     if not updated_report:
         raise HTTPException(status_code=500, detail="Failed to update report")
 
+    # Also update status if provided
+    if payload.report_status:
+        ReportRepository.update_status(report_id, payload.report_status)
+        updated_report = ReportRepository.get_by_id(report_id)
+
     return {
         "id": updated_report["id"],
         "report_name": updated_report["report_name"],
+        "report_status": updated_report.get("report_status"),
         "created_at": updated_report["created_at"],
     }
 
@@ -535,6 +542,38 @@ async def get_report_analysis(
         "analysis": analysis_doc["ai_report_content"] if analysis_doc else None,
     }
 
+
+class UpdateAnalysisRequest(BaseModel):
+    content: str
+
+
+@router.put("/reports/{report_id}/analysis")
+async def update_report_analysis(
+    report_id: str,
+    payload: UpdateAnalysisRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Save user-edited analysis content for a report"""
+    report = ReportRepository.get_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if (
+        report["user_id"] != current_user["id"]
+        and "admin" not in current_user.get("roles", [])
+    ):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    AIExtractedContentRepository.save_analysis(
+        report_id=report_id,
+        content=payload.content,
+        created_by=current_user["id"],
+    )
+
+    return {
+        "report_id": report_id,
+        "analysis": payload.content,
+    }
 
 
 @router.get("/reports/{report_id}/download")

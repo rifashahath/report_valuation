@@ -54,55 +54,63 @@ export default function ReportsSidebar({ selectedReportId, onReportSelect }: Rep
                     </div>
                 ) : (
                     <div className="p-4 space-y-2">
-                        {reports.map((report: ApiReport) => (
-                            <button
-                                key={report.id}
-                                onClick={() => onReportSelect(report.id)}
-                                className={`w-full text-left p-4 rounded-xl border transition-all group hover:shadow-soft ${selectedReportId === report.id
-                                    ? 'border-brand-500 bg-brand-50 shadow-sm'
-                                    : 'border-secondary-100 hover:border-brand-300 bg-white'
-                                    }`}
-                            >
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className={`font-semibold truncate ${selectedReportId === report.id
-                                            ? 'text-brand-900'
-                                            : 'text-secondary-900 group-hover:text-brand-800'
-                                            }`}>
-                                            {report.report_name || report.name}
-                                        </h3>
-                                        {report.bank_name && (
-                                            <p className="text-sm text-secondary-500 mt-1 truncate">
-                                                {report.bank_name}
-                                            </p>
-                                        )}
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <Calendar size={14} className="text-secondary-400" />
-                                            <span className="text-xs text-secondary-500">
-                                                {formatDate(report.created_at)}
-                                            </span>
+                        {reports.map((report: ApiReport) => {
+                            const status = (report as any).report_status ?? (report as any).status ?? 'draft';
+
+                            const badgeClass =
+                                status === 'approved'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : status === 'review'
+                                        ? 'bg-orange-100 text-orange-800'
+                                        : 'bg-secondary-100 text-secondary-800';
+
+                            return (
+                                <button
+                                    key={report.id}
+                                    onClick={() => onReportSelect(report.id)}
+                                    className={`w-full text-left p-4 rounded-xl border transition-all group hover:shadow-soft ${selectedReportId === report.id
+                                            ? 'border-brand-500 bg-brand-50 shadow-sm'
+                                            : 'border-secondary-100 hover:border-brand-300 bg-white'
+                                        }`}
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <h3
+                                                className={`font-semibold truncate ${selectedReportId === report.id
+                                                        ? 'text-brand-900'
+                                                        : 'text-secondary-900 group-hover:text-brand-800'
+                                                    }`}
+                                            >
+                                                {report.report_name || report.name}
+                                            </h3>
+
+                                            {report.bank_name && (
+                                                <p className="text-sm text-secondary-500 mt-1 truncate">{report.bank_name}</p>
+                                            )}
+
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <Calendar size={14} className="text-secondary-400" />
+                                                <span className="text-xs text-secondary-500">{formatDate(report.created_at)}</span>
+                                            </div>
+
+                                            <div className="mt-2">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}`}>
+                                                    {String(status).charAt(0).toUpperCase() + String(status).slice(1)}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="mt-2">
-                                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${report.status === 'approved'
-                                                ? 'bg-emerald-100 text-emerald-800'
-                                                : report.status === 'review'
-                                                    ? 'bg-orange-100 text-orange-800'
-                                                    : 'bg-secondary-100 text-secondary-800'
-                                                }`}>
-                                                {(report.status || 'draft').charAt(0).toUpperCase() + (report.status || 'draft').slice(1)}
-                                            </span>
-                                        </div>
+
+                                        <ChevronRight
+                                            size={20}
+                                            className={`flex-shrink-0 transition-transform ${selectedReportId === report.id
+                                                    ? 'text-brand-600 translate-x-1'
+                                                    : 'text-secondary-300 group-hover:text-brand-500 group-hover:translate-x-1'
+                                                }`}
+                                        />
                                     </div>
-                                    <ChevronRight
-                                        size={20}
-                                        className={`flex-shrink-0 transition-transform ${selectedReportId === report.id
-                                            ? 'text-brand-600 translate-x-1'
-                                            : 'text-secondary-300 group-hover:text-brand-500 group-hover:translate-x-1'
-                                            }`}
-                                    />
-                                </div>
-                            </button>
-                        ))}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>

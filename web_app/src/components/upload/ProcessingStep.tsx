@@ -1,16 +1,21 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { UploadedFile } from './types';
 
 interface ProcessingStepProps {
     files: UploadedFile[];
     selectedFiles: string[];
+    progress?: { completed: number; total: number; percentage: number };
 }
 
-export default function ProcessingStep({ files, selectedFiles }: ProcessingStepProps) {
+export default function ProcessingStep({ files, selectedFiles, progress }: ProcessingStepProps) {
+    const pct = progress ? Math.round(progress.percentage) : 0;
+    const done = progress?.completed ?? 0;
+    const total = progress?.total ?? selectedFiles.length;
+
     return (
         <div className="max-w-3xl mx-auto space-y-6">
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 text-center relative overflow-hidden">
-                {/* Background Decoration */}
+                {/* Animated top bar */}
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-500 via-brand-600 to-indigo-600 animate-pulse" />
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 dark:bg-brand-900/20 rounded-full blur-3xl -translate-y-16 translate-x-16 pointer-events-none opacity-50" />
 
@@ -19,12 +24,31 @@ export default function ProcessingStep({ files, selectedFiles }: ProcessingStepP
                         <Loader2 size={32} className="text-brand-600 animate-spin" />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">Processing Documents</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-10 max-w-md mx-auto font-medium">
-                        Our AI is analyzing <span className="font-bold text-brand-600 underline decoration-brand-200 decoration-2 underline-offset-4">{selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'}</span>. This might take a moment.
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 max-w-md mx-auto font-medium">
+                        Our AI is analyzing{' '}
+                        <span className="font-bold text-brand-600 underline decoration-brand-200 decoration-2 underline-offset-4">
+                            {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'}
+                        </span>
+                        . This might take a moment.
                     </p>
+
+                    {/* Overall progress bar */}
+                    <div className="mb-8 space-y-2">
+                        <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            <span>{done} of {total} files</span>
+                            <span>{pct}%</span>
+                        </div>
+                        <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out"
+                                style={{ width: `${pct}%` }}
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide py-2">
+                {/* Per-file list */}
+                <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2 scrollbar-hide py-2">
                     {files
                         .filter((f) => selectedFiles.includes(f.id))
                         .map((file, index) => (
@@ -37,21 +61,26 @@ export default function ProcessingStep({ files, selectedFiles }: ProcessingStepP
                                 }}
                             >
                                 <div className="p-2 bg-white dark:bg-slate-700 rounded-lg shadow-sm">
-                                    <Loader2 size={16} className="text-brand-500 animate-spin" />
+                                    {file.progress >= 100
+                                        ? <CheckCircle2 size={16} className="text-emerald-500" />
+                                        : <Loader2 size={16} className="text-brand-500 animate-spin" />
+                                    }
                                 </div>
 
                                 <div className="flex-1 min-w-0 text-left">
                                     <div className="flex justify-between items-center mb-2">
-                                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate tracking-tight">{file.name || file.file?.name}</h4>
-                                        <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-100 uppercase tracking-wider">
-                                            {file.progress < 100 ? 'Analyzing' : 'Finalizing'}
+                                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate tracking-tight">
+                                            {file.name || file.file?.name}
+                                        </h4>
+                                        <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-100 uppercase tracking-wider flex-shrink-0 ml-2">
+                                            {file.progress >= 100 ? 'Done' : 'Analyzing'}
                                         </span>
                                     </div>
 
                                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1 overflow-hidden">
                                         <div
                                             className="bg-brand-600 h-full rounded-full transition-all duration-700 ease-in-out"
-                                            style={{ width: `${file.progress}%` }}
+                                            style={{ width: `${file.progress ?? 40}%` }}
                                         />
                                     </div>
                                 </div>
@@ -62,10 +91,8 @@ export default function ProcessingStep({ files, selectedFiles }: ProcessingStepP
 
             <p className="text-center text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] flex items-center justify-center gap-3">
                 <span className="w-2 h-2 bg-brand-500 rounded-full shrink-0 animate-pulse" />
-                Processing is active — You can safely leave this page
+                Processing is active — The wizard will auto-advance when done
             </p>
-
-
         </div>
     );
 }
