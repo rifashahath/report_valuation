@@ -4,19 +4,165 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-    .animate-slide-up {
-        animation: slide-up 0.3s ease-out;
-    }
+/* ============================================================
+   BASE — smooth transitions for theme switching
+   ============================================================ */
+@layer base {
+  html {
+    @apply antialiased;
+    scroll-behavior: smooth;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+
+  /* Prevent transition on page load */
+  .no-transition * {
+    transition: none !important;
+  }
+
+  body {
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 dark:bg-slate-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-300 dark:bg-slate-600;
+  }
 }
 
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+@layer utilities {
+  /* Animations */
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50;
+  }
+
+  .glass-card {
+    @apply bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm dark:shadow-none;
+  }
+
+  /* Theme toggle ring */
+  .theme-ring {
+    @apply ring-2 ring-offset-2 ring-brand-500 ring-offset-white dark:ring-offset-slate-950;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent;
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300;
+  }
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
 @keyframes slide-up {
-    from {
-        opacity: 0;
-        transform: translateY(16px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 148, 255, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(56, 148, 255, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 148, 255, 0); }
+}
+
+/* ============================================================
+   COMPONENT CLASSES
+   ============================================================ */
+@layer components {
+  /* Animated blobs for auth pages */
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  /* Input base style */
+  .input-base {
+    @apply w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700
+           bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700
+           text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500
+           focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500
+           outline-none transition-all font-medium;
+  }
+
+  /* Badge variants */
+  .badge-draft {
+    @apply px-3 py-1 rounded-lg text-xs font-bold border
+           bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400
+           border-amber-100 dark:border-amber-900/30;
+  }
+  .badge-review {
+    @apply px-3 py-1 rounded-lg text-xs font-bold border
+           bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400
+           border-orange-100 dark:border-orange-900/30;
+  }
+  .badge-approved {
+    @apply px-3 py-1 rounded-lg text-xs font-bold border
+           bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400
+           border-emerald-100 dark:border-emerald-900/30;
+  }
+
+  /* Theme toggle button */
+  .theme-toggle {
+    @apply relative p-2.5 rounded-xl transition-all duration-300
+           bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+           hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-brand-200 dark:hover:border-brand-700
+           text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400
+           shadow-sm hover:shadow-md;
+  }
 }

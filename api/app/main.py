@@ -38,7 +38,9 @@ app.include_router(banks_router)
 app.include_router(jobs_router)   # ← async Celery-based job API
 
 # Serve uploaded files statically so the browser can preview PDFs
-_upload_dir = os.getenv("UPLOAD_DIR", "/app/uploads")
+# Default to uploads/ next to this file rather than the Docker-only /app/uploads
+_default_upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+_upload_dir = os.getenv("UPLOAD_DIR", _default_upload_dir)
 os.makedirs(_upload_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=_upload_dir), name="uploads")
 

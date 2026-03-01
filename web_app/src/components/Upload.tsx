@@ -299,139 +299,141 @@ export default function Upload() {
   // ==================== RENDER ====================
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700">
-        <div className="w-full mx-auto px-2 sm:px-3 lg:px-4 py-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            {/* Title */}
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg flex items-center justify-center">
-                <Plus className="text-white" size={24} />
+    <div className="h-full">
+      <div className="bg-white dark:bg-night-900 rounded-2xl border border-brand-100 dark:border-night-800 shadow-lg dark:shadow-none overflow-hidden">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white dark:bg-night-900/95 backdrop-blur-xl border-b border-slate-100 dark:border-night-700">
+          <div className="w-full mx-auto px-2 sm:px-3 lg:px-4 py-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              {/* Title */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg flex items-center justify-center">
+                  <Plus className="text-white" size={24} />
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  New Report
+                </h1>
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                New Report
-              </h1>
-            </div>
 
-            {/* Step Indicator */}
-            {viewMode === 'upload' && (
-              <div className="mt-6">
-                <StepIndicator currentStep={currentStep} />
+              {/* Step Indicator */}
+              {viewMode === 'upload' && (
+                <div className="mt-6">
+                  <StepIndicator currentStep={currentStep} />
+                </div>
+              )}
+
+              {/* View Mode Toggle */}
+              <div className="flex gap-2 bg-slate-100 dark:bg-night-800 p-1 rounded-xl">
+                <button
+                  onClick={() => setViewMode('upload')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${viewMode === 'upload'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                >
+                  <LayoutGrid size={16} />
+                  Wizard
+                </button>
+                <button
+                  onClick={() => setViewMode('browse')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${viewMode === 'browse'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                >
+                  <History size={16} />
+                  History
+                </button>
               </div>
-            )}
-
-            {/* View Mode Toggle */}
-            <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <button
-                onClick={() => setViewMode('upload')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${viewMode === 'upload'
-                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-              >
-                <LayoutGrid size={16} />
-                Wizard
-              </button>
-              <button
-                onClick={() => setViewMode('browse')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${viewMode === 'browse'
-                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-              >
-                <History size={16} />
-                History
-              </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-8">
-        {viewMode === 'browse' ? (
-          /* Browse Mode - History View */
-          <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 h-[calc(100vh-16rem)]">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-              <ReportsSidebar
-                selectedReportId={selectedBrowseReportId}
-                onReportSelect={setSelectedBrowseReportId}
-              />
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-8">
+          {viewMode === 'browse' ? (
+            /* Browse Mode - History View */
+            <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 h-[calc(100vh-16rem)]">
+              <div className="bg-white dark:bg-night-900 rounded-2xl shadow-lg border border-slate-200 dark:border-night-700 overflow-hidden">
+                <ReportsSidebar
+                  selectedReportId={selectedBrowseReportId}
+                  onReportSelect={setSelectedBrowseReportId}
+                />
+              </div>
+              <div className="bg-white dark:bg-night-900 rounded-2xl shadow-lg border border-slate-200 dark:border-night-700 overflow-hidden">
+                <ReportDetailView reportId={selectedBrowseReportId} />
+              </div>
             </div>
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-              <ReportDetailView reportId={selectedBrowseReportId} />
-            </div>
-          </div>
-        ) : (
-          /* Upload Wizard Mode */
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {currentStep === 1 && (
-              <ProjectNameStep
-                projectName={projectName}
-                setProjectName={setProjectName}
-                bankName={bankName}
-                setBankName={setBankName}
-                onNext={handleCreateReport}
-                recentProjects={recentProjects}
-              />
-            )}
+          ) : (
+            /* Upload Wizard Mode */
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {currentStep === 1 && (
+                <ProjectNameStep
+                  projectName={projectName}
+                  setProjectName={setProjectName}
+                  bankName={bankName}
+                  setBankName={setBankName}
+                  onNext={handleCreateReport}  
+                  recentProjects={recentProjects}
+                />
+              )}
 
-            {currentStep === 2 && (
-              <UploadStep
-                projectName={projectName}
-                files={files}
-                onFilesChange={setFiles}
-                onUpload={handleFileUpload}
-                onDownload={handleDownload}
-                onNext={() => setCurrentStep(3)}
-                onBack={() => setCurrentStep(1)}
-              />
-            )}
+              {currentStep === 2 && (
+                <UploadStep
+                  projectName={projectName}
+                  files={files}
+                  onFilesChange={setFiles}
+                  onUpload={handleFileUpload}
+                  onDownload={handleDownload}
+                  onNext={() => setCurrentStep(3)}
+                  onBack={() => setCurrentStep(1)}
+                />
+              )}
 
-            {currentStep === 3 && (
-              <FileSelectionStep
-                files={files}
-                selectedFiles={selectedFiles}
-                setSelectedFiles={setSelectedFiles}
-                onFilesChange={setFiles}
-                onUpload={handleFileUpload}
-                onDownload={handleDownload}
-                onBack={() => setCurrentStep(2)}
-                onNext={handleImportAndAnalyze}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <div className="flex flex-col gap-6">
-                <ProcessingStep
+              {currentStep === 3 && (
+                <FileSelectionStep
                   files={files}
                   selectedFiles={selectedFiles}
+                  setSelectedFiles={setSelectedFiles}
+                  onFilesChange={setFiles}
+                  onUpload={handleFileUpload}
+                  onDownload={handleDownload}
+                  onBack={() => setCurrentStep(2)}
+                  onNext={handleImportAndAnalyze}
                 />
-                <div className="flex justify-center pb-8">
-                  <button
-                    onClick={() => navigate('/dashboard')}
-                    className="flex items-center gap-2 text-slate-500 hover:text-brand-600 transition-all font-medium text-sm group"
-                  >
-                    <span>Processing in background — click here to return to Dashboard</span>
-                    <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
 
-            {currentStep === 5 && (
-              <CompletionStep
-                files={files}
-                selectedFiles={selectedFiles}
-                analysisResult={analysisResult}
-                onSave={handleCreateProject}
-                onRestart={handleFinish}
-              />
-            )}
-          </div>
-        )}
-      </main>
+              {currentStep === 4 && (
+                <div className="flex flex-col gap-6">
+                  <ProcessingStep
+                    files={files}
+                    selectedFiles={selectedFiles}
+                  />
+                  <div className="flex justify-center pb-8">
+                    <button
+                      onClick={() => navigate('/dashboard')}
+                      className="flex items-center gap-2 text-slate-500 hover:text-brand-600 transition-all font-medium text-sm group"
+                    >
+                      <span>Processing in background — click here to return to Dashboard</span>
+                      <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 5 && (
+                <CompletionStep
+                  files={files}
+                  selectedFiles={selectedFiles}
+                  analysisResult={analysisResult}
+                  onSave={handleCreateProject}
+                  onRestart={handleFinish}
+                />
+              )}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

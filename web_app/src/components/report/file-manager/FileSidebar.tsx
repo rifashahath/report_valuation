@@ -115,9 +115,12 @@ export default function FileSidebar({
                 <div
                     className={`
                         flex items-center gap-2 px-3 py-2 cursor-pointer rounded-lg transition-all
-                        ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}
+                        ${isSelected
+                            ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }
                         ${isDragOver && isDropTarget
-                            ? 'bg-blue-100 border-2 border-blue-400 border-dashed text-blue-700 scale-[1.02]'
+                            ? 'bg-brand-100 dark:bg-brand-900/40 border-2 border-brand-400 border-dashed text-brand-700 dark:text-brand-300 scale-[1.02]'
                             : 'border-2 border-transparent'
                         }
                     `}
@@ -131,7 +134,7 @@ export default function FileSidebar({
                     onDrop={handleDrop}
                 >
                     {node.type === 'folder' && (
-                        <span className="text-gray-400 flex-shrink-0">
+                        <span className="text-slate-400 flex-shrink-0">
                             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </span>
                     )}
@@ -147,7 +150,7 @@ export default function FileSidebar({
                                 <Folder size={16} className="text-blue-500" />
                             )
                         ) : (
-                            <FileText size={16} className="text-gray-400" />
+                            <FileText size={16} className="text-slate-400 dark:text-slate-500" />
                         )}
                     </span>
 
@@ -173,22 +176,22 @@ export default function FileSidebar({
     };
 
     return (
-        <div className="w-80 bg-white border-r border-gray-200 overflow-auto flex flex-col h-full">
-            <div className="p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-                <h2 className="text-sm font-semibold text-gray-700 mb-3">Folder Structure</h2>
+        <div className="w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 overflow-auto flex flex-col h-full">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Folder Structure</h2>
                 <div className="relative">
-                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     <input
                         type="text"
                         placeholder="Search reports or files..."
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className="w-full pl-9 pr-8 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
                     />
                     {isSearching && (
                         <button
                             onClick={() => onSearchChange('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5 rounded"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-0.5 rounded"
                             title="Clear search"
                         >
                             <X size={14} />
@@ -196,7 +199,7 @@ export default function FileSidebar({
                     )}
                 </div>
                 {isSearching && (
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                         {filteredTree.length > 0
                             ? `Showing results for "${searchQuery}"`
                             : `No results for "${searchQuery}"`}
@@ -211,10 +214,10 @@ export default function FileSidebar({
 
             <div className="p-2 overflow-y-auto flex-1 custom-scrollbar">
                 {filteredTree.length === 0 && isSearching ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center text-gray-400 px-4">
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400 dark:text-slate-500 px-4">
                         <Search size={32} className="mb-3 opacity-40" />
-                        <p className="text-sm font-medium text-gray-600">No results found</p>
-                        <p className="text-xs mt-1 text-gray-400">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No results found</p>
+                        <p className="text-xs mt-1 text-slate-400 dark:text-slate-500">
                             Nothing matches "{searchQuery}"
                         </p>
                         <button
