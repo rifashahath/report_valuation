@@ -23,9 +23,8 @@ export default function ReportEditorPage() {
     // updateReportMutation.mutate({ reportId, data: { content } });
   };
 
-  const handleSendForReview = async (reportId: string) => {
-    // updateReportMutation.mutate({ reportId, data: { status: 'review' } });
-    navigate(`/reports/${reportId}/review`);
+  const handleNewReport = () => {
+    navigate('/upload');
   };
 
   if (isLoading) {
@@ -52,7 +51,7 @@ export default function ReportEditorPage() {
       report={selectedReport}
       onBack={handleBack}
       onSave={handleSave}
-      onSendForReview={handleSendForReview}
+      onNewReport={handleNewReport}
     />
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Send, Sparkles, MessageSquare, ChevronLeft } from 'lucide-react';
+import { Save, Plus, Sparkles, MessageSquare, ChevronLeft } from 'lucide-react';
 import { ValuationReport } from '../../types';
 import { formatDate } from '../../utils/formatDate';
 
@@ -7,10 +7,10 @@ interface ReportEditorProps {
     report: ValuationReport | null;
     onBack: () => void;
     onSave: (reportId: string, content: ValuationReport['content']) => void;
-    onSendForReview: (reportId: string) => void;
+    onNewReport: () => void;
 }
 
-export default function ReportEditor({ report, onBack, onSave, onSendForReview }: ReportEditorProps) {
+export default function ReportEditor({ report, onBack, onSave, onNewReport }: ReportEditorProps) {
     const [content, setContent] = useState(report?.content || {
         summary: '',
         propertyDetails: '',
@@ -52,9 +52,7 @@ export default function ReportEditor({ report, onBack, onSave, onSendForReview }
         onSave(report.id, content);
     };
 
-    const handleSendForReview = () => {
-        onSendForReview(report.id);
-    };
+
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -96,11 +94,12 @@ export default function ReportEditor({ report, onBack, onSave, onSendForReview }
                             <span className="font-medium">Save Draft</span>
                         </button>
                         <button
-                            onClick={handleSendForReview}
-                            className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+                            id="new-report-btn"
+                            onClick={onNewReport}
+                            className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-all shadow-sm active:scale-[0.98]"
                         >
-                            <Send size={18} />
-                            <span className="font-medium">Send for Review</span>
+                            <Plus size={18} />
+                            <span className="font-medium">New Report</span>
                         </button>
                     </div>
                 </div>

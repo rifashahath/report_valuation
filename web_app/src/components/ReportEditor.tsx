@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Save, Send, Sparkles, MessageSquare, ChevronLeft } from 'lucide-react';
+import { Save, Plus, Sparkles, MessageSquare, ChevronLeft } from 'lucide-react';
 import { ValuationReport } from '../types';
+
+
+
 
 interface ReportEditorProps {
   report: ValuationReport | null;
   onBack: () => void;
   onSave: (reportId: string, content: ValuationReport['content']) => void;
-  onSendForReview: (reportId: string) => void;
+  onNewReport: () => void;
 }
 
-export default function ReportEditor({ report, onBack, onSave, onSendForReview }: ReportEditorProps) {
+export default function ReportEditor({ report, onBack, onSave, onNewReport }: ReportEditorProps) {
   const [content, setContent] = useState(report?.content || {
     summary: '',
     propertyDetails: '',
@@ -44,9 +47,7 @@ export default function ReportEditor({ report, onBack, onSave, onSendForReview }
     onSave(report.id, content);
   };
 
-  const handleSendForReview = () => {
-    onSendForReview(report.id);
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,11 +89,12 @@ export default function ReportEditor({ report, onBack, onSave, onSendForReview }
               <span className="font-medium">Save Draft</span>
             </button>
             <button
-              onClick={handleSendForReview}
+              id="new-report-btn"
+              onClick={onNewReport}
               className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-all shadow-sm active:scale-[0.98]"
             >
-              <Send size={18} />
-              <span className="font-medium">Send for Review</span>
+              <Plus size={18} />
+              <span className="font-medium">New Report</span>
             </button>
           </div>
         </div>
@@ -126,8 +128,8 @@ export default function ReportEditor({ report, onBack, onSave, onSendForReview }
                 key={section.key}
                 onClick={() => setActiveSection(section.key)}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${activeSection === section.key
-                    ? 'bg-brand-50 text-brand-700 font-medium'
-                    : 'text-secondary-700 hover:bg-secondary-50'
+                  ? 'bg-brand-50 text-brand-700 font-medium'
+                  : 'text-secondary-700 hover:bg-secondary-50'
                   }`}
               >
                 {section.icon}

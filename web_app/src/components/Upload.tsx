@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Plus, History, ChevronRight, Copy, Home } from 'lucide-react';
+import { LayoutGrid, Plus, History } from 'lucide-react';
 import { config } from '../config/config';
 
 // Components
@@ -22,36 +22,86 @@ import { useProcessMultipleDocuments } from '../hooks/useDocuments';
 import { reportsApi } from '../apis/report.api';
 import { useAppStore } from '../store/useAppStore';
 
-// Types
 type ViewMode = 'upload' | 'browse';
 
 export default function Upload() {
   // ==================== STATE ====================
 
-  // View Management
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Project Information
   const [projectName, setProjectName] = useState('');
   const [bankName, setBankName] = useState('');
 
-  // File Management
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [processingProgress, setProcessingProgress] = useState({ completed: 0, total: 0, percentage: 0 });
+  const [processingProgress, setProcessingProgress] = useState({
+    completed: 0,
+    total: 0,
+    percentage: 0,
+  });
 
-  // Browse Mode
   const [selectedBrowseReportId, setSelectedBrowseReportId] = useState<string | null>(null);
   const [recentProjects] = useState<ProjectReport[]>([]);
 
   // ==================== REFS ====================
 
-  // Prevents initializeFromExistingReport running twice on StrictMode / re-renders
   const hasInitialized = useRef(false);
-  // Holds active polling interval so we can clear it on unmount
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ==================== HELPERS ====================
+
+  /**
+   * ✅ Production-safe copy:
+   * - Uses navigator.clipboard on secure contexts (https or localhost)
+   * - Falls back to execCommand for http/ip:port or restricted contexts
+   */
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Modern way (works only on HTTPS or localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+
+      // Fallback for HTTP / older browsers / some restricted contexts
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch (e) {
+      console.error('Copy failed:', e);
+      return false;
+    }
+  };
+
+  /**
+   * Builds a stable link that people can open later:
+   * /upload/:reportId
+   *
+   * If you have an env like config.FRONTEND_URL, you can swap origin for that.
+   */
+  const buildShareUrl = (effectiveReportId: string) => {
+    // Prefer a configured public URL if you have one (optional)
+    // Example: config.publicWebUrl or config.frontendUrl etc.
+    // If you don't have it, we just use window.location.origin
+    const origin =
+      (config as any)?.frontendUrl ||
+      (config as any)?.publicWebUrl ||
+      window.location.origin;
+
+    return `${origin}/upload/${effectiveReportId}`;
+  };
 
   // ==================== HOOKS ====================
 
@@ -61,19 +111,17 @@ export default function Upload() {
   const { currentUploadReportId: reportId, setCurrentUploadReportId: setReportId } = useAppStore();
   const { data: reportData, isLoading: isLoadingReport } = useReport(urlReportId);
   const createReportMutation = useCreateReport();
-  const processMultipleMutation = useProcessMultipleDocuments();
+  const processMultipleMutation = useProcessMultipleDocuments(); // (kept, even if unused here)
 
   // ==================== EFFECTS ====================
 
-  // Initialize from URL report (run once when data arrives)
   useEffect(() => {
     if (!urlReportId || !reportData || isLoadingReport) return;
-    if (hasInitialized.current) return;  // guard against double-run
+    if (hasInitialized.current) return;
     hasInitialized.current = true;
     initializeFromExistingReport(reportData as any);
   }, [urlReportId, reportData, isLoadingReport]);
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
@@ -83,18 +131,16 @@ export default function Upload() {
   // ==================== INITIALIZATION ====================
 
   const initializeFromExistingReport = async (rawData: any) => {
-    // Backend returns { report, files } shape
     const report = rawData?.report ?? rawData;
     const backendFiles: any[] = rawData?.files ?? report?.files ?? [];
-    const reportId = report?.id;
+    const effectiveReportId = report?.id;
 
-    if (!reportId) return;
+    if (!effectiveReportId) return;
 
-    setReportId(reportId);
+    setReportId(effectiveReportId);
     setProjectName(report.report_name || report.name || '');
     setBankName(report.bank_name || '');
 
-    // ✅ Restore files list from backend so ProcessingStep shows correct data on refresh
     if (backendFiles.length > 0) {
       const restoredFiles: UploadedFile[] = backendFiles.map((f: any) => ({
         id: f.id,
@@ -110,31 +156,26 @@ export default function Upload() {
     }
 
     try {
-      // Check processing status to determine which step to resume
-      const statusData = await reportsApi.getReportStatus(reportId);
+      const statusData = await reportsApi.getReportStatus(effectiveReportId);
 
       if (statusData.status === 'completed' || statusData.has_analysis) {
-        // Processing done — load analysis and go to step 5
         try {
-          const analysisResponse = await reportsApi.getReportAnalysis(reportId);
+          const analysisResponse = await reportsApi.getReportAnalysis(effectiveReportId);
           if (analysisResponse?.analysis) {
             setAnalysisResult(analysisResponse.analysis);
           }
         } catch (_) { }
         setCurrentStep(5);
       } else if (statusData.status === 'processing') {
-        // Still processing — resume step 4 with live polling
         setProcessingProgress(statusData.progress);
         setCurrentStep(4);
-        startPolling(reportId);
+        startPolling(effectiveReportId);
       } else {
-        // empty / unknown — let them upload files
         setCurrentStep(2);
       }
     } catch (error) {
-      // Fallback if status call fails
       try {
-        const analysisResponse = await reportsApi.getReportAnalysis(reportId);
+        const analysisResponse = await reportsApi.getReportAnalysis(effectiveReportId);
         if (analysisResponse?.analysis) {
           setAnalysisResult(analysisResponse.analysis);
           setCurrentStep(5);
@@ -145,28 +186,31 @@ export default function Upload() {
     }
   };
 
-  // Shared polling logic — used by both fresh-start and refresh-resume paths
   const startPolling = (effectiveReportId: string) => {
-    // Clear any existing interval before starting a new one
     if (pollingRef.current) clearInterval(pollingRef.current);
 
-    const MAX_POLLS = 200; // ~10 minutes at 3s intervals
+    const MAX_POLLS = 200; // ~10 minutes @ 3s
     let polls = 0;
+
     pollingRef.current = setInterval(async () => {
       polls++;
       if (polls > MAX_POLLS) {
         if (pollingRef.current) clearInterval(pollingRef.current);
         return;
       }
+
       try {
         const statusData = await reportsApi.getReportStatus(effectiveReportId);
         setProcessingProgress(statusData.progress);
+
         if (statusData.status === 'completed') {
           if (pollingRef.current) clearInterval(pollingRef.current);
+
           try {
             const analysisResponse = await reportsApi.getReportAnalysis(effectiveReportId);
             if (analysisResponse?.analysis) setAnalysisResult(analysisResponse.analysis);
           } catch (_) { }
+
           setCurrentStep(5);
         }
       } catch (_) { }
@@ -175,7 +219,6 @@ export default function Upload() {
 
   // ==================== STEP HANDLERS ====================
 
-  // Step 1: Create Report
   const handleCreateReport = async () => {
     if (!projectName.trim()) {
       alert('Please enter a project name');
@@ -203,7 +246,6 @@ export default function Upload() {
     }
   };
 
-  // Step 2: Upload Files
   const handleFileUpload = async (newFiles: File[]) => {
     const effectiveReportId = reportId || urlReportId;
 
@@ -211,11 +253,9 @@ export default function Upload() {
       alert('Report ID missing. Please restart the project.');
       return;
     }
-
     if (newFiles.length === 0) return;
 
-    // Create temporary file entries
-    const tempFiles: UploadedFile[] = newFiles.map(file => ({
+    const tempFiles: UploadedFile[] = newFiles.map((file) => ({
       id: generateFileId(),
       file,
       status: 'uploading',
@@ -224,44 +264,38 @@ export default function Upload() {
       fileSize: formatFileSize(file.size),
     }));
 
-    setFiles(prev => [...prev, ...tempFiles]);
+    setFiles((prev) => [...prev, ...tempFiles]);
 
     try {
-      // Update progress
-      updateFilesProgress(tempFiles.map(f => f.id), 50);
+      updateFilesProgress(tempFiles.map((f) => f.id), 50);
 
-      // Upload files
       const response = await reportsApi.uploadFiles(effectiveReportId, newFiles);
 
-      if (response && (response.success || (response as any).files)) {
-        const serverFiles = (response as any).files || response.documents || [];
+      if (response && ((response as any).success || (response as any).files)) {
+        const serverFiles = (response as any).files || (response as any).documents || [];
 
-        setFiles(prev => prev.map(f => {
-          // Find matching server file by name
-          const match = serverFiles.find((sf: any) => sf.file_name === (f.name || f.file?.name));
-          if (match) {
-            return { ...f, serverFileId: match.id, status: 'completed', progress: 100 };
-          }
-          return f;
-        }));
+        setFiles((prev) =>
+          prev.map((f) => {
+            const localName = f.name || f.file?.name;
+            const match = serverFiles.find((sf: any) => sf.file_name === localName);
+            if (match) {
+              return { ...f, serverFileId: match.id, status: 'completed', progress: 100 };
+            }
+            return f;
+          })
+        );
 
-        updateFilesStatus(tempFiles.map(f => f.id), 'completed', 100);
-        setSelectedFiles(prev => [...prev, ...tempFiles.map(f => f.id)]);
+        updateFilesStatus(tempFiles.map((f) => f.id), 'completed', 100);
+        setSelectedFiles((prev) => [...prev, ...tempFiles.map((f) => f.id)]);
       } else {
         throw new Error('Upload response invalid');
       }
     } catch (error) {
       console.error('Upload failed', error);
-      updateFilesStatus(
-        tempFiles.map(f => f.id),
-        'error',
-        0,
-        'Upload failed'
-      );
+      updateFilesStatus(tempFiles.map((f) => f.id), 'error', 0, 'Upload failed');
     }
   };
 
-  // Step 3 -> 4: Import and Analyze — stays inside wizard, no separate page
   const handleImportAndAnalyze = async () => {
     const effectiveReportId = reportId || urlReportId;
 
@@ -269,7 +303,6 @@ export default function Upload() {
       alert('Please select at least one file.');
       return;
     }
-
     if (!effectiveReportId) {
       alert('Report ID is missing. Please restart or check the URL.');
       return;
@@ -278,30 +311,24 @@ export default function Upload() {
     setCurrentStep(4);
 
     try {
-      // Trigger backend processing
       await reportsApi.importFiles(effectiveReportId);
     } catch (error: any) {
       console.error('Import failed:', error);
-      // Stay on step 4 even if import call errors — polling will still try
+      // still poll
     }
 
-    // Start polling via shared helper
     startPolling(effectiveReportId);
   };
 
-  // Step 5: Navigate to the report editor
   const handleCreateProject = () => {
     const effectiveReportId = reportId || urlReportId;
-
     if (!effectiveReportId) {
       alert('Report ID is missing. Cannot save report.');
       return;
     }
-
     navigate(`/reports/${effectiveReportId}/edit`);
   };
 
-  // Reset and Start Over
   const handleFinish = () => {
     resetUploadState();
     navigate('/upload');
@@ -318,7 +345,6 @@ export default function Upload() {
     } catch (error) {
       console.error('File download failed', error);
 
-      // Fallback: download from local file object
       if (file.file) {
         const url = URL.createObjectURL(file.file);
         downloadUrl(url, file.file.name);
@@ -327,18 +353,14 @@ export default function Upload() {
     }
   };
 
-  // ==================== UTILITY FUNCTIONS ====================
+  // ==================== UTILS ====================
 
   const generateFileId = () => Math.random().toString(36).substr(2, 9);
 
-  const formatFileSize = (bytes: number): string => {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
+  const formatFileSize = (bytes: number): string => `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 
   const updateFilesProgress = (fileIds: string[], progress: number) => {
-    setFiles(prev =>
-      prev.map(f => (fileIds.includes(f.id) ? { ...f, progress } : f))
-    );
+    setFiles((prev) => prev.map((f) => (fileIds.includes(f.id) ? { ...f, progress } : f)));
   };
 
   const updateFilesStatus = (
@@ -347,8 +369,8 @@ export default function Upload() {
     progress?: number,
     error?: string
   ) => {
-    setFiles(prev =>
-      prev.map(f =>
+    setFiles((prev) =>
+      prev.map((f) =>
         fileIds.includes(f.id)
           ? { ...f, status, ...(progress !== undefined && { progress }), ...(error && { error }) }
           : f
@@ -437,7 +459,6 @@ export default function Upload() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-8">
           {viewMode === 'browse' ? (
-            /* Browse Mode - History View */
             <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 h-[calc(100vh-16rem)]">
               <div className="bg-white dark:bg-night-900 rounded-2xl shadow-lg border border-slate-200 dark:border-night-700 overflow-hidden">
                 <ReportsSidebar
@@ -450,7 +471,6 @@ export default function Upload() {
               </div>
             </div>
           ) : (
-            /* Upload Wizard Mode */
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               {currentStep === 1 && (
                 <ProjectNameStep
@@ -489,32 +509,18 @@ export default function Upload() {
               )}
 
               {currentStep === 4 && (
-                <div className="flex flex-col gap-6">
-                  <ProcessingStep
-                    files={files}
-                    selectedFiles={selectedFiles}
-                    progress={processingProgress}
-                  />
-                  <div className="flex items-center justify-center gap-3 pb-8">
-                    <button
-                      onClick={() => {
-                        const url = window.location.href;
-                        navigator.clipboard.writeText(url);
-                      }}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm"
-                    >
-                      <Copy size={15} />
-                      Copy Link
-                    </button>
-                    <button
-                      onClick={() => navigate('/')}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-sm"
-                    >
-                      <Home size={15} />
-                      Go to Home
-                    </button>
-                  </div>
-                </div>
+                <ProcessingStep
+                  files={files}
+                  selectedFiles={selectedFiles}
+                  progress={processingProgress}
+                  onCopyLink={async () => {
+                    const effectiveReportId = reportId || urlReportId;
+                    if (!effectiveReportId) return false;
+                    const shareUrl = buildShareUrl(effectiveReportId);
+                    return copyToClipboard(shareUrl);
+                  }}
+                  onGoHome={() => navigate('/')}
+                />
               )}
 
               {currentStep === 5 && (

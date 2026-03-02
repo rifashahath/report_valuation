@@ -1,16 +1,36 @@
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, CheckCircle2, Copy, Home } from 'lucide-react';
 import { UploadedFile } from './types';
 
 interface ProcessingStepProps {
     files: UploadedFile[];
     selectedFiles: string[];
     progress?: { completed: number; total: number; percentage: number };
+    onCopyLink?: () => Promise<boolean | void>;
+    onGoHome?: () => void;
 }
 
-export default function ProcessingStep({ files, selectedFiles, progress }: ProcessingStepProps) {
+export default function ProcessingStep({
+    files,
+    selectedFiles,
+    progress,
+    onCopyLink,
+    onGoHome,
+}: ProcessingStepProps) {
     const pct = progress ? Math.round(progress.percentage) : 0;
     const done = progress?.completed ?? 0;
     const total = progress?.total ?? selectedFiles.length;
+
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+        if (!onCopyLink) return;
+        const ok = await onCopyLink();
+        if (ok !== false) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
@@ -33,7 +53,7 @@ export default function ProcessingStep({ files, selectedFiles, progress }: Proce
                     </p>
 
                     {/* Overall progress bar */}
-                    <div className="mb-8 space-y-2">
+                    <div className="mb-6 space-y-2">
                         <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
                             <span>{done} of {total} files</span>
                             <span>{pct}%</span>
@@ -44,6 +64,39 @@ export default function ProcessingStep({ files, selectedFiles, progress }: Proce
                                 style={{ width: `${pct}%` }}
                             />
                         </div>
+                    </div>
+
+                    {/* Action buttons — inside the card, above the file list */}
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                        <button
+                            id="processing-copy-link-btn"
+                            onClick={handleCopy}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border font-semibold hover:scale-[1.03] transition-all duration-200 text-sm ${copied
+                                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-md scale-105'
+                                    : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                }`}
+                        >
+                            {copied ? (
+                                <>
+                                    <CheckCircle2 size={15} />
+                                    Copied!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy size={15} />
+                                    Copy Link
+                                </>
+                            )}
+                        </button>
+
+                        <button
+                            id="processing-go-home-btn"
+                            onClick={onGoHome}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 hover:scale-[1.03] transition-all duration-200 text-sm"
+                        >
+                            <Home size={15} />
+                            Go to Home
+                        </button>
                     </div>
                 </div>
 
